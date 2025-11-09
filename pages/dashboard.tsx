@@ -4,14 +4,18 @@ import Head from 'next/head';
 import Layout from '../components/Layout';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import { storage, User, Task } from '../utils/storage';
-import { DollarSign, Briefcase, CheckCircle, Clock } from 'lucide-react';
+import DailySubmissionForm from '../components/DailySubmission';
+import SubmissionHistory from '../components/SubmissionHistory';
+import { storage, User, Task, DailySubmission } from '../utils/storage';
+import { DollarSign, Briefcase, CheckCircle, Clock, Calendar } from 'lucide-react';
 
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [myTasks, setMyTasks] = useState<Task[]>([]);
   const [availableTasks, setAvailableTasks] = useState<Task[]>([]);
+  const [activeTab, setActiveTab] = useState<'overview' | 'daily-work'>('overview');
+  const [mySubmissions, setMySubmissions] = useState<DailySubmission[]>([]);
 
   useEffect(() => {
     const currentUser = storage.getCurrentUser();
@@ -25,14 +29,24 @@ export default function Dashboard() {
     }
     
     setUser(currentUser);
-    
+    loadData(currentUser);
+  }, [router]);
+
+  const loadData = (currentUser: User) => {
     const tasks = storage.getTasks();
     setMyTasks(tasks.filter(t => t.assignedTo === currentUser.id));
     setAvailableTasks(tasks.filter(t => 
       t.status === 'available' && 
       t.skills.some(skill => currentUser.skills.includes(skill))
     ));
-  }, [router]);
+    
+    const submissions = storage.getDailySubmissions();
+    setMySubmissions(
+      submissions
+        .filter(s => s.userId === currentUser.id)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    );
+  };
 
   if (!user) return null;
 
@@ -81,41 +95,74 @@ export default function Dashboard() {
       </Head>
 
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Welcome back, {user.fullName}!
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Here's an overview of your work progress
-          </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-4xl font-black text-gray-900">
+              Welcome back, {user.fullName}! 👋
+            </h1>
+            <p className="text-gray-600 mt-2 text-lg">
+              Here's an overview of your work progress
+            </p>
+          </div>
         </div>
 
-        {!user.demoTaskCompleted && (
-          <Card className="bg-yellow-50 border-yellow-200">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-semibold text-yellow-900">Complete Your Demo Task</h3>
-                <p className="text-sm text-yellow-700 mt-1">
-                  You need to complete a demo task before accepting regular projects
-                </p>
-              </div>
-              <Button variant="secondary" onClick={() => router.push('/demo-task')}>
-                Start Demo
-              </Button>
+        <div className="flex gap-4 border-b-2 border-gray-200">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`px-6 py-3 font-bold text-lg transition-all ${
+              activeTab === 'overview'
+                ? 'text-indigo-600 border-b-4 border-indigo-600 -mb-0.5'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Briefcase size={20} />
+              Overview
             </div>
-          </Card>
-        )}
+          </button>
+          <button
+            onClick={() => setActiveTab('daily-work')}
+            className={`px-6 py-3 font-bold text-lg transition-all ${
+              activeTab === 'daily-work'
+                ? 'text-indigo-600 border-b-4 border-indigo-600 -mb-0.5'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Calendar size={20} />
+              Daily Work
+            </div>
+          </button>
+        </div>
 
-        {user.accountStatus === 'pending' && (
-          <Card className="bg-blue-50 border-blue-200">
-            <h3 className="font-semibold text-blue-900">Account Verification Pending</h3>
-            <p className="text-sm text-blue-700 mt-1">
-              Your account is under review. You'll be notified once approved.
-            </p>
-          </Card>
-        )}
+        {activeTab === 'overview' && (
+          <>
+            {!user.demoTaskCompleted && (
+              <Card className="bg-yellow-50 border-yellow-200">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-yellow-900">Complete Your Demo Task</h3>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      You need to complete a demo task before accepting regular projects
+                    </p>
+                  </div>
+                  <Button variant="secondary" onClick={() => router.push('/demo-task')}>
+                    Start Demo
+                  </Button>
+                </div>
+              </Card>
+            )}
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {user.accountStatus === 'pending' && (
+              <Card className="bg-blue-50 border-blue-200">
+                <h3 className="font-semibold text-blue-900">Account Verification Pending</h3>
+                <p className="text-sm text-blue-700 mt-1">
+                  Your account is under review. You'll be notified once approved.
+                </p>
+              </Card>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {stats.map((stat, idx) => (
             <Card key={idx} className="text-center">
               <div className={`w-12 h-12 ${stat.color} rounded-full flex items-center justify-center mx-auto mb-3`}>
@@ -185,6 +232,22 @@ export default function Dashboard() {
             )}
           </Card>
         </div>
+          </>
+        )}
+
+        {activeTab === 'daily-work' && (
+          <div className="space-y-8">
+            <DailySubmissionForm 
+              userId={user.id} 
+              onSubmit={() => loadData(user)}
+            />
+            
+            <div>
+              <h2 className="text-3xl font-black text-gray-900 mb-6">Submission History</h2>
+              <SubmissionHistory submissions={mySubmissions} />
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

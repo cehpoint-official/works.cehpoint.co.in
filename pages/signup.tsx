@@ -120,86 +120,86 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/30 py-12">
       <Head>
         <title>Sign Up - Cehpoint</title>
       </Head>
 
-      <div className="max-w-2xl mx-auto px-4">
-        <div className="text-center mb-8">
+      <div className="max-w-2xl mx-auto px-4 animate-fade-in">
+        <div className="text-center mb-10">
           <Link href="/">
-            <span className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent cursor-pointer">
+            <span className="text-4xl font-black bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent cursor-pointer hover:scale-110 inline-block transition-transform">
               Cehpoint
             </span>
           </Link>
-          <h1 className="text-3xl font-bold mt-4">Join Our Platform</h1>
-          <p className="text-gray-600 mt-2">Start your project-based work journey</p>
+          <h1 className="text-4xl font-black mt-6 text-gray-900">Join Our Platform</h1>
+          <p className="text-gray-600 mt-3 text-lg">Start your project-based work journey today</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border p-8">
-          <div className="flex justify-between mb-8">
+        <div className="glass-card rounded-3xl premium-shadow p-10">
+          <div className="flex justify-between mb-10">
             <div className={`flex-1 text-center ${step >= 1 ? 'text-indigo-600' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full ${step >= 1 ? 'bg-indigo-600' : 'bg-gray-300'} text-white flex items-center justify-center mx-auto mb-2`}>
-                {step > 1 ? <CheckCircle size={20} /> : '1'}
+              <div className={`w-12 h-12 rounded-full ${step >= 1 ? 'bg-gradient-to-br from-indigo-600 to-purple-600' : 'bg-gray-300'} text-white flex items-center justify-center mx-auto mb-2 font-bold shadow-lg`}>
+                {step > 1 ? <CheckCircle size={22} /> : '1'}
               </div>
-              <p className="text-sm font-medium">Basic Info</p>
+              <p className="text-sm font-bold">Basic Info</p>
             </div>
             <div className={`flex-1 text-center ${step >= 2 ? 'text-indigo-600' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full ${step >= 2 ? 'bg-indigo-600' : 'bg-gray-300'} text-white flex items-center justify-center mx-auto mb-2`}>
-                {step > 2 ? <CheckCircle size={20} /> : '2'}
+              <div className={`w-12 h-12 rounded-full ${step >= 2 ? 'bg-gradient-to-br from-indigo-600 to-purple-600' : 'bg-gray-300'} text-white flex items-center justify-center mx-auto mb-2 font-bold shadow-lg`}>
+                {step > 2 ? <CheckCircle size={22} /> : '2'}
               </div>
-              <p className="text-sm font-medium">Skills</p>
+              <p className="text-sm font-bold">Skills</p>
             </div>
             <div className={`flex-1 text-center ${step >= 3 ? 'text-indigo-600' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full ${step >= 3 ? 'bg-indigo-600' : 'bg-gray-300'} text-white flex items-center justify-center mx-auto mb-2`}>
+              <div className={`w-12 h-12 rounded-full ${step >= 3 ? 'bg-gradient-to-br from-indigo-600 to-purple-600' : 'bg-gray-300'} text-white flex items-center justify-center mx-auto mb-2 font-bold shadow-lg`}>
                 3
               </div>
-              <p className="text-sm font-medium">Verification</p>
+              <p className="text-sm font-bold">Verification</p>
             </div>
           </div>
 
           {step === 1 && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium mb-2">Full Name</label>
+                <label className="block text-sm font-bold mb-3 text-gray-700">Full Name</label>
                 <input
                   type="text"
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent"
+                  className="w-full px-5 py-4 premium-input rounded-xl text-base font-medium"
                   placeholder="John Doe"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Email</label>
+                <label className="block text-sm font-bold mb-3 text-gray-700">Email</label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent"
+                  className="w-full px-5 py-4 premium-input rounded-xl text-base font-medium"
                   placeholder="john@example.com"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Password</label>
+                <label className="block text-sm font-bold mb-3 text-gray-700">Password</label>
                 <input
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent"
+                  className="w-full px-5 py-4 premium-input rounded-xl text-base font-medium"
                   placeholder="••••••••"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Phone</label>
+                <label className="block text-sm font-bold mb-3 text-gray-700">Phone</label>
                 <input
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent"
+                  className="w-full px-5 py-4 premium-input rounded-xl text-base font-medium"
                   placeholder="+1 234 567 8900"
                 />
               </div>
@@ -209,7 +209,7 @@ export default function Signup() {
           {step === 2 && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Select Your Skills</label>
+                <label className="block text-sm font-bold mb-3 text-gray-700">Select Your Skills</label>
                 <div className="grid grid-cols-2 gap-2">
                   {skillOptions.map(skill => (
                     <button
@@ -228,7 +228,7 @@ export default function Signup() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Experience Level</label>
+                <label className="block text-sm font-bold mb-3 text-gray-700">Experience Level</label>
                 <select
                   value={formData.experience}
                   onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
@@ -243,7 +243,7 @@ export default function Signup() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Timezone</label>
+                <label className="block text-sm font-bold mb-3 text-gray-700">Timezone</label>
                 <input
                   type="text"
                   value={formData.timezone}
@@ -254,7 +254,7 @@ export default function Signup() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Preferred Weekly Payout ($)</label>
+                <label className="block text-sm font-bold mb-3 text-gray-700">Preferred Weekly Payout ($)</label>
                 <input
                   type="number"
                   value={formData.preferredWeeklyPayout}
@@ -265,7 +265,7 @@ export default function Signup() {
               </div>
               
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <label className="block text-sm font-medium mb-2">Gemini API Key (Optional - for AI features)</label>
+                <label className="block text-sm font-bold mb-3 text-gray-700">Gemini API Key (Optional - for AI features)</label>
                 <input
                   type="password"
                   value={geminiKey}

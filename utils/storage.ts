@@ -51,6 +51,20 @@ export interface Payment {
   completedAt?: string;
 }
 
+export interface DailySubmission {
+  id: string;
+  userId: string;
+  date: string;
+  githubCommitUrl?: string;
+  videoUrl?: string;
+  description: string;
+  workType: 'development' | 'design' | 'video-editing' | 'content' | 'other';
+  hoursWorked: number;
+  createdAt: string;
+  adminReviewed: boolean;
+  adminFeedback?: string;
+}
+
 export const storage = {
   getUsers: (): User[] => {
     if (typeof window === 'undefined') return [];
@@ -98,5 +112,16 @@ export const storage = {
   setPayments: (payments: Payment[]) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem('cehpoint_payments', JSON.stringify(payments));
+  },
+
+  getDailySubmissions: (): DailySubmission[] => {
+    if (typeof window === 'undefined') return [];
+    const submissions = localStorage.getItem('cehpoint_daily_submissions');
+    return submissions ? JSON.parse(submissions) : [];
+  },
+
+  setDailySubmissions: (submissions: DailySubmission[]) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('cehpoint_daily_submissions', JSON.stringify(submissions));
   },
 };
