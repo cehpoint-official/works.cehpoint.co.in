@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { LogOut, User, Briefcase, Settings, DollarSign, Home } from 'lucide-react';
+import { LogOut, User, Briefcase, Settings, DollarSign, Home, Calendar } from 'lucide-react';
 import { storage, User as UserType } from '../utils/storage';
 
 interface LayoutProps {
@@ -68,13 +68,19 @@ export default function Layout({ children }: LayoutProps) {
                   <Link href="/admin">
                     <button className="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
                       <Home size={18} />
-                      <span>Admin Dashboard</span>
+                      <span>Dashboard</span>
                     </button>
                   </Link>
                   <Link href="/admin/workers">
                     <button className="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
                       <User size={18} />
                       <span>Workers</span>
+                    </button>
+                  </Link>
+                  <Link href="/admin/daily-work">
+                    <button className="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
+                      <Calendar size={18} />
+                      <span>Daily Work</span>
                     </button>
                   </Link>
                   <Link href="/admin/tasks">
