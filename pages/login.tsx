@@ -26,7 +26,7 @@ export default function Login() {
   // CREATE ADMIN ACCOUNT IN LOCAL STORAGE
   // ================================================
   const createDemoAdmin = () => {
-    const adminEmail = "sarthakroy902@gmail.com";
+    const adminEmail = "admin@gmail.com";
     const adminPassword = "admin123";
 
     const users = storage.getUsers();
