@@ -108,8 +108,9 @@ export default function Dashboard() {
               Welcome back, {user.fullName}! 👋
             </h1>
             <p className="text-gray-600 mt-2 text-lg">
-              Here's an overview of your work progress
+              Here&apos;s an overview of your work progress
             </p>
+
           </div>
         </div>
 
@@ -117,8 +118,8 @@ export default function Dashboard() {
           <button
             onClick={() => setActiveTab('overview')}
             className={`px-6 py-3 font-bold text-lg transition-all ${activeTab === 'overview'
-                ? 'text-indigo-600 border-b-4 border-indigo-600 -mb-0.5'
-                : 'text-gray-600 hover:text-gray-900'
+              ? 'text-indigo-600 border-b-4 border-indigo-600 -mb-0.5'
+              : 'text-gray-600 hover:text-gray-900'
               }`}
           >
             <div className="flex items-center gap-2">
@@ -129,8 +130,8 @@ export default function Dashboard() {
           <button
             onClick={() => setActiveTab('daily-work')}
             className={`px-6 py-3 font-bold text-lg transition-all ${activeTab === 'daily-work'
-                ? 'text-indigo-600 border-b-4 border-indigo-600 -mb-0.5'
-                : 'text-gray-600 hover:text-gray-900'
+              ? 'text-indigo-600 border-b-4 border-indigo-600 -mb-0.5'
+              : 'text-gray-600 hover:text-gray-900'
               }`}
           >
             <div className="flex items-center gap-2">
@@ -162,7 +163,7 @@ export default function Dashboard() {
               <Card className="bg-blue-50 border-blue-200">
                 <h3 className="font-semibold text-blue-900">Account Verification Pending</h3>
                 <p className="text-sm text-blue-700 mt-1">
-                  Your account is under review. You'll be notified once approved.
+                  Your account is under review. You&apos;ll be notified once approved.
                 </p>
               </Card>
             )}
