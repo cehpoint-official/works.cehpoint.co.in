@@ -96,10 +96,14 @@ Password: admin123`
     try {
       const result = await firebaseLogin(email, password);
 
+      // Allow admin login without email verification
       if (!result.user.emailVerified) {
-        setError("Please verify your email before logging in.");
-        return;
+        if (result.user.email !== "sarthakroy902@gmail.com") {
+          setError("Please verify your email before logging in.");
+          return;
+        }
       }
+
 
       // Store user...
       const loggedInUser: User = {
