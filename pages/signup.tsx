@@ -490,6 +490,7 @@ export default function Signup() {
       // FIX: Safe GitHub username extraction
       const githubRawInfo = (user as any)?.reloadUserInfo;
 
+      const users = storage.getUsers();
       const githubName =
         user.displayName ||
         githubRawInfo?.screenName ||
