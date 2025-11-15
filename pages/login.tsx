@@ -21,6 +21,58 @@ export default function Login() {
     initializeTestData();
   }, []);
 
+
+
+  // DEMO ADMIN (unchanged)
+  // =============================================================
+  const createDemoAdmin = () => {
+    const users = storage.getUsers();
+
+    // The admin email you want
+    const adminEmail = "sarthakroy902@gmail.com";
+
+    // Check if admin already exists
+    const existingAdmin = users.find(u => u.email === adminEmail);
+
+    if (!existingAdmin) {
+      const adminUser: User = {
+        id: 'admin-1',                    // Must be unique
+        email: adminEmail,
+        password: 'admin123',
+        fullName: 'Admin User',
+        phone: '+1234567890',
+        skills: [],
+        experience: 'expert',
+        timezone: 'UTC',
+        preferredWeeklyPayout: 0,
+
+        role: 'admin',
+        accountStatus: 'active',
+        knowledgeScore: 100,
+        demoTaskCompleted: true,
+
+        createdAt: new Date().toISOString(),
+        balance: 0,
+      };
+
+      // Save admin to user list
+      storage.setUsers([...users, adminUser]);
+
+      alert(
+        `Demo admin created!
+Email: ${adminEmail}
+Password: admin123`
+      );
+    } else {
+      alert(
+        `Admin already exists!
+Email: ${adminEmail}
+Password: admin123`
+      );
+    }
+  };
+
+
   // =============================================================
   // EMAIL + PASSWORD LOGIN
   // =============================================================
@@ -172,54 +224,7 @@ export default function Login() {
 
 
   // =============================================================
-  // DEMO ADMIN (unchanged)
-  // =============================================================
-  const createDemoAdmin = () => {
-    const users = storage.getUsers();
 
-    // The admin email you want
-    const adminEmail = "sarthakroy902@gmail.com";
-
-    // Check if admin already exists
-    const existingAdmin = users.find(u => u.email === adminEmail);
-
-    if (!existingAdmin) {
-      const adminUser: User = {
-        id: 'admin-1',                    // Must be unique
-        email: adminEmail,
-        password: 'admin123',
-        fullName: 'Admin User',
-        phone: '+1234567890',
-        skills: [],
-        experience: 'expert',
-        timezone: 'UTC',
-        preferredWeeklyPayout: 0,
-
-        role: 'admin',
-        accountStatus: 'active',
-        knowledgeScore: 100,
-        demoTaskCompleted: true,
-
-        createdAt: new Date().toISOString(),
-        balance: 0,
-      };
-
-      // Save admin to user list
-      storage.setUsers([...users, adminUser]);
-
-      alert(
-        `Demo admin created!
-Email: ${adminEmail}
-Password: admin123`
-      );
-    } else {
-      alert(
-        `Admin already exists!
-Email: ${adminEmail}
-Password: admin123`
-      );
-    }
-  };
 
 
 
