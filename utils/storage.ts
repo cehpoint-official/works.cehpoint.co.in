@@ -154,9 +154,13 @@ import {
   listSubmissionsByUser as fsListSubmissionsByUser,
   listSubmissions as fsListSubmissions,
   updateSubmission as fsUpdateSubmission,
+
+  createPayment as fsCreatePayment,
+  listPayments as fsListPayments,
+  listPaymentsByUser as fsListPaymentsByUser,
 } from "./firestore";
 
-import type { User, Task, DailySubmission } from "./types";
+import type { User, Task, DailySubmission, Payment } from "./types";
 
 /**
  * Firestore-backed storage module
@@ -166,6 +170,19 @@ export const storage = {
   /* ---------------------------------------------------
    * USERS
    * --------------------------------------------------- */
+  // PAYMENTS
+  async createPayment(payment: Omit<Payment, "id">) {
+    return await fsCreatePayment(payment);
+  },
+
+  async getPaymentsByUser(userId: string) {
+    return await fsListPaymentsByUser(userId);
+  },
+
+  async getPayments() {
+    return await fsListPayments();
+  },
+
 
   async getUsers(): Promise<User[]> {
     return await fsListUsers();
@@ -255,4 +272,5 @@ export const storage = {
   async updateSubmission(id: string, payload: Partial<DailySubmission>) {
     return await fsUpdateSubmission(id, payload);
   },
+
 };

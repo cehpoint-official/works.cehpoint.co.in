@@ -91,6 +91,27 @@ export async function createSubmission(data: Omit<DailySubmission, "id">) {
   return { id: ref.id, ...data };
 }
 
+// ----------------- PAYMENTS -----------------
+import type { Payment } from "./types";
+
+const paymentsCol = collection(db, "payments");
+
+export async function createPayment(data: Omit<Payment, "id">) {
+  const ref = await addDoc(paymentsCol, data);
+  return { id: ref.id, ...data } as Payment;
+}
+
+export async function listPaymentsByUser(userId: string) {
+  const q = query(paymentsCol, where("userId", "==", userId));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...(d.data() as Payment) })) as Payment[];
+}
+
+export async function listPayments() {
+  const snap = await getDocs(paymentsCol);
+  return snap.docs.map(d => ({ id: d.id, ...(d.data() as Payment) })) as Payment[];
+}
+
 // UPDATE a submission
 export async function updateSubmission(
   id: string,
@@ -110,3 +131,4 @@ export async function listSubmissionsByUser(userId: string) {
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...(d.data() as DailySubmission) })) as DailySubmission[];
 }
+
