@@ -1,44 +1,58 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+
 import Layout from '../components/Layout';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import { storage, User, Payment } from '../utils/storage';
+
+import { storage } from '../utils/storage';
+import type { User, Payment } from '../utils/types';
+
 import { format } from 'date-fns';
 import { DollarSign, TrendingUp, Download } from 'lucide-react';
 
 export default function Payments() {
   const router = useRouter();
+
   const [user, setUser] = useState<User | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [showWithdraw, setShowWithdraw] = useState(false);
 
+  /* ----------------------------------------
+   * LOAD USER + PAYMENTS
+   * --------------------------------------*/
   useEffect(() => {
     const currentUser = storage.getCurrentUser();
+
     if (!currentUser || currentUser.role !== 'worker') {
       router.push('/login');
       return;
     }
+
     setUser(currentUser);
     loadPayments(currentUser.id);
   }, [router]);
 
-  const loadPayments = (userId: string) => {
-    const allPayments = storage.getPayments();
-    setPayments(allPayments.filter(p => p.userId === userId));
+  const loadPayments = async (userId: string) => {
+    const list = await storage.getPaymentsByUser(userId);
+    setPayments(list);
   };
 
-  const handleWithdraw = () => {
+  /* ----------------------------------------
+   * HANDLE WITHDRAWAL
+   * --------------------------------------*/
+  const handleWithdraw = async () => {
     if (!user) return;
-    
+
     const amount = parseFloat(withdrawAmount);
+
     if (isNaN(amount) || amount <= 0) {
-      alert('Please enter a valid amount');
+      alert('Enter a valid amount');
       return;
     }
-    
+
     if (amount > user.balance) {
       alert('Insufficient balance');
       return;
@@ -49,31 +63,41 @@ export default function Payments() {
       return;
     }
 
-    const newPayment: Payment = {
-      id: `payment-${Date.now()}`,
+    // Create a withdrawal record
+    const newPayment: Omit<Payment, "id"> = {
       userId: user.id,
-      amount: amount,
+      amount,
       type: 'withdrawal',
       status: 'pending',
       createdAt: new Date().toISOString(),
     };
 
-    const allPayments = storage.getPayments();
-    storage.setPayments([...allPayments, newPayment]);
+    await storage.createPayment(newPayment);
 
-    const users = storage.getUsers();
-    const updatedUsers = users.map(u =>
-      u.id === user.id ? { ...u, balance: u.balance - amount } : u
-    );
-    storage.setUsers(updatedUsers);
-    storage.setCurrentUser({ ...user, balance: user.balance - amount });
+    // Deduct from user balance
+    await storage.updateUser(user.id, {
+      balance: user.balance - amount,
+    });
 
-    setUser({ ...user, balance: user.balance - amount });
-    loadPayments(user.id);
+    // Update local storage session
+    storage.setCurrentUser({
+      ...user,
+      balance: user.balance - amount,
+    });
+
+    setUser({
+      ...user,
+      balance: user.balance - amount,
+    });
+
     setWithdrawAmount('');
     setShowWithdraw(false);
+
+    await loadPayments(user.id);
     alert('Withdrawal request submitted!');
   };
+
+  if (!user) return null;
 
   const totalEarnings = payments
     .filter(p => p.type === 'task-payment' && p.status === 'completed')
@@ -82,8 +106,6 @@ export default function Payments() {
   const totalWithdrawn = payments
     .filter(p => p.type === 'withdrawal' && p.status === 'completed')
     .reduce((sum, p) => sum + p.amount, 0);
-
-  if (!user) return null;
 
   return (
     <Layout>

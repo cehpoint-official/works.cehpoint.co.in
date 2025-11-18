@@ -5,6 +5,7 @@ export type UserRole = "worker" | "admin";
 // utils/types.ts
 
 export interface User {
+  [x: string]: any;
   id: string;
   email: string;
   password: string;
