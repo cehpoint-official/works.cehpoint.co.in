@@ -136,44 +136,46 @@
 
 
 
+
 // utils/storage.ts
-import * as fs from "fs";
+
 import {
   createUser,
-  getUserByEmail,
-  getUserById,
-  listUsers,
-  setUser,
-  createTask,
-  listTasks,
-  updateTask,
-  createSubmission,
-  listSubmissionsByUser,
-  listSubmissions,
+  getUserByEmail as fsGetUserByEmail,
+  getUserById as fsGetUserById,
+  listUsers as fsListUsers,
+  setUser as fsSetUser,
+
+  createTask as fsCreateTask,
+  listTasks as fsListTasks,
+  updateTask as fsUpdateTask,
+
+  createSubmission as fsCreateSubmission,
+  listSubmissionsByUser as fsListSubmissionsByUser,
+  listSubmissions as fsListSubmissions,
 } from "./firestore";
+
 import type { User, Task, DailySubmission } from "./types";
 
 /**
- * Note: This `storage` module mirrors the shape of your old localStorage API,
- * but internally uses Firestore helper functions. Most calls are async.
- *
- * Usage (async):
- *   const users = await storage.getUsers();
- *   await storage.createUser(userPayload);
+ * Firestore-backed storage module
+ * Mirrors your old localStorage API but works async with Firestore.
  */
-
 export const storage = {
-  // USERS
+  /* ---------------------------------------------------
+   * USERS
+   * --------------------------------------------------- */
+
   async getUsers(): Promise<User[]> {
-    return await listUsers();
+    return await fsListUsers();
   },
 
   async getUserByEmail(email: string): Promise<User | null> {
-    return await getUserByEmail(email);
+    return await fsGetUserByEmail(email);
   },
 
   async getUserById(id: string): Promise<User | null> {
-    return await getUserById(id);
+    return await fsGetUserById(id);
   },
 
   async createUser(user: Omit<User, "id">): Promise<User> {
@@ -181,10 +183,13 @@ export const storage = {
   },
 
   async updateUser(id: string, payload: Partial<User>) {
-    return await setUser(id, payload);
+    return await fsSetUser(id, payload);
   },
 
-  // CURRENT USER (browser-local caching of current user)
+  /* ---------------------------------------------------
+   * CURRENT USER (local browser session only)
+   * --------------------------------------------------- */
+
   setCurrentUser(user: User) {
     if (typeof window !== "undefined") {
       localStorage.setItem("ceh_current_user", JSON.stringify(user));
@@ -193,9 +198,9 @@ export const storage = {
 
   getCurrentUser(): User | null {
     if (typeof window === "undefined") return null;
-    const raw = localStorage.getItem("ceh_current_user");
-    if (!raw) return null;
     try {
+      const raw = localStorage.getItem("ceh_current_user");
+      if (!raw) return null;
       return JSON.parse(raw) as User;
     } catch {
       return null;
@@ -208,29 +213,35 @@ export const storage = {
     }
   },
 
-  // TASKS
+  /* ---------------------------------------------------
+   * TASKS
+   * --------------------------------------------------- */
+
   async getTasks(): Promise<Task[]> {
-    return await listTasks();
+    return await fsListTasks();
   },
 
   async createTask(task: Omit<Task, "id">): Promise<Task> {
-    return await createTask(task);
+    return await fsCreateTask(task);
   },
 
   async updateTask(id: string, payload: Partial<Task>) {
-    return await updateTask(id, payload);
+    return await fsUpdateTask(id, payload);
   },
 
-  // SUBMISSIONS
+  /* ---------------------------------------------------
+   * DAILY SUBMISSIONS
+   * --------------------------------------------------- */
+
   async createSubmission(sub: Omit<DailySubmission, "id">): Promise<DailySubmission> {
-    return await createSubmission(sub);
+    return await fsCreateSubmission(sub);
   },
 
   async getSubmissionsByUser(userId: string): Promise<DailySubmission[]> {
-    return await listSubmissionsByUser(userId);
+    return await fsListSubmissionsByUser(userId);
   },
 
   async getAllSubmissions(): Promise<DailySubmission[]> {
-    return await listSubmissions();
+    return await fsListSubmissions();
   },
 };
