@@ -623,25 +623,42 @@ export default function Signup() {
   /* ============================================================
      EMAIL + PASSWORD SIGNUP (Verification Required)
   ============================================================ */
-  const handleEmailSignup = async () => {
-    try {
-      const result = await firebaseSignup(formData.email, formData.password);
+const handleEmailSignup = async () => {
+  try {
+    const result = await firebaseSignup(formData.email, formData.password);
+    const user = result.user;
 
-      alert("Verification email sent! Please check your inbox.");
-      router.push("/login");
+    // Send verification email already handled
+    alert("Verification email sent! Please check your inbox.");
 
-    } catch (err: any) {
-      console.error(err);
+    // Create Firestore user document
+    const newUser = {
+      uid: user.uid,
+      email: formData.email,
+      password: formData.password,
+      fullName: formData.fullName,
+      phone: formData.phone,
+      experience: formData.experience,
+      timezone: formData.timezone,
+      preferredWeeklyPayout: formData.preferredWeeklyPayout,
+      skills: selectedSkills,
+      role: "worker",
+      accountStatus: "pending",
+      knowledgeScore: 0,
+      demoTaskCompleted: false,
+      emailVerified: false,
+      createdAt: new Date().toISOString(),
+      balance: 0,
+    };
 
-      if (err.code === "auth/email-already-in-use") {
-        alert("Email already exists.");
-      } else if (err.code === "auth/weak-password") {
-        alert("Weak password.");
-      } else {
-        alert("Signup failed.");
-      }
-    }
-  };
+    await setDoc(doc(db, "users", user.uid), newUser);
+
+    router.push("/login");
+  } catch (err) {
+    console.error(err);
+  }
+};
+
 
   /* ============================================================
      STEP HANDLING
