@@ -83,3 +83,26 @@ export interface Payment {
     createdAt: string;
     completedAt?: string;
 }
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  skills: string[];
+  weeklyPayout: number;
+  deadline: string;
+
+  status: "available" | "in-progress" | "submitted" | "completed" | "rejected";
+  assignedTo: string | null;
+
+  submissionUrl?: string;
+  feedback?: string;
+
+  createdBy: string;
+  createdAt: string;
+
+  assignedAt?: string;      // <-- FIX
+  submittedAt?: string;
+  completedAt?: string;
+}
