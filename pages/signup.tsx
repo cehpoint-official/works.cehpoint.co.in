@@ -502,6 +502,7 @@ import { initGemini, generateKnowledgeQuestions } from "../utils/gemini";
 
 // UI
 import Button from "../components/Button";
+import { User } from "../utils/types";
 
 export default function Signup() {
   const router = useRouter();
@@ -548,20 +549,28 @@ export default function Signup() {
       const result = await googleAuth();
       const user = result.user;
 
-      const newUser = {
+      const newUser: User = {
         id: user.uid,
-        email: user.email,
+        email: user.email || "",
+        password: "",
         fullName: user.displayName || "",
-        role: "worker",
-        accountStatus: "pending",
-        createdAt: new Date().toISOString(),
+        phone: "",
+        experience: "",
+        timezone: "",
+        preferredWeeklyPayout: 0,
         skills: [],
+        accountStatus: "pending" as const,
+        role: "worker" as const,
+        knowledgeScore: 0,
+        demoTaskCompleted: false,
+        createdAt: new Date().toISOString(),
         balance: 0,
       };
 
-      await setDoc(doc(db, "users", user.uid), newUser);
 
+      await setDoc(doc(db, "users", user.uid), newUser);
       storage.setCurrentUser(newUser);
+
       router.push("/dashboard");
     } catch (err) {
       console.error(err);
@@ -583,20 +592,27 @@ export default function Signup() {
         user.email?.split("@")[0] ||
         "New User";
 
-      const newUser = {
+      const newUser: User = {
         id: user.uid,
         email: user.email || "",
+        password: "",
         fullName: username,
-        role: "worker",
-        accountStatus: "pending",
-        createdAt: new Date().toISOString(),
+        phone: "",
+        experience: "",
+        timezone: "",
+        preferredWeeklyPayout: 0,
         skills: [],
+        accountStatus: "pending" as const,
+        role: "worker" as const,
+        knowledgeScore: 0,
+        demoTaskCompleted: false,
+        createdAt: new Date().toISOString(),
         balance: 0,
       };
 
       await setDoc(doc(db, "users", user.uid), newUser);
-
       storage.setCurrentUser(newUser);
+
       router.push("/dashboard");
     } catch (err) {
       console.error(err);
@@ -612,8 +628,8 @@ export default function Signup() {
       const result = await firebaseSignup(formData.email, formData.password);
 
       alert("Verification email sent! Please check your inbox.");
-
       router.push("/login");
+
     } catch (err: any) {
       console.error(err);
 
@@ -628,7 +644,7 @@ export default function Signup() {
   };
 
   /* ============================================================
-     STEPS HANDLING
+     STEP HANDLING
   ============================================================ */
   const handleNext = async () => {
     if (step === 1) {
@@ -706,7 +722,7 @@ export default function Signup() {
       </Head>
 
       <div className="max-w-2xl mx-auto px-4 animate-fade-in">
-        
+
         {/* Header */}
         <div className="text-center mb-10">
           <Link href="/">
@@ -727,9 +743,8 @@ export default function Signup() {
             {["Basic Info", "Skills", "Verification"].map((label, i) => (
               <div key={i} className={`flex-1 text-center ${step >= i + 1 ? "text-indigo-600" : "text-gray-400"}`}>
                 <div
-                  className={`w-12 h-12 rounded-full ${
-                    step >= i + 1 ? "bg-gradient-to-br from-indigo-600 to-purple-600" : "bg-gray-300"
-                  } text-white flex items-center justify-center mx-auto mb-2 font-bold shadow-lg`}
+                  className={`w-12 h-12 rounded-full ${step >= i + 1 ? "bg-gradient-to-br from-indigo-600 to-purple-600" : "bg-gray-300"
+                    } text-white flex items-center justify-center mx-auto mb-2 font-bold shadow-lg`}
                 >
                   {step > i + 1 ? <CheckCircle size={22} /> : i + 1}
                 </div>
@@ -822,11 +837,10 @@ export default function Signup() {
                   <button
                     key={skill}
                     onClick={() => handleSkillToggle(skill)}
-                    className={`px-4 py-2 rounded-lg border-2 ${
-                      selectedSkills.includes(skill)
+                    className={`px-4 py-2 rounded-lg border-2 ${selectedSkills.includes(skill)
                         ? "border-indigo-600 bg-indigo-50 text-indigo-600"
                         : "border-gray-300"
-                    }`}
+                      }`}
                   >
                     {skill}
                   </button>
@@ -899,11 +913,10 @@ export default function Signup() {
                         newAns[idx] = optIdx;
                         setAnswers(newAns);
                       }}
-                      className={`w-full text-left px-4 py-2 rounded-lg border-2 mb-2 ${
-                        answers[idx] === optIdx
+                      className={`w-full text-left px-4 py-2 rounded-lg border-2 mb-2 ${answers[idx] === optIdx
                           ? "border-indigo-600 bg-indigo-50"
                           : "border-gray-300"
-                      }`}
+                        }`}
                     >
                       {option}
                     </button>
