@@ -549,23 +549,28 @@ export default function Signup() {
       const result = await googleAuth();
       const user = result.user;
 
-      const newUser: User = {
-        id: user.uid,
-        email: user.email || "",
-        password: "",
-        fullName: user.displayName || "",
-        phone: "",
-        experience: "",
-        timezone: "",
-        preferredWeeklyPayout: 0,
-        skills: [],
-        accountStatus: "pending",
-        role: "worker" as const,
-        knowledgeScore: 0,
-        demoTaskCompleted: false,
-        createdAt: new Date().toISOString(),
-        balance: 0,
-      };
+const newUser: User = {
+  id: user.uid,
+  email: user.email || "",
+  password: "",
+  fullName: formData.fullName,
+  phone: formData.phone,
+  skills: selectedSkills,
+  experience: formData.experience,
+  timezone: formData.timezone,
+  preferredWeeklyPayout: formData.preferredWeeklyPayout,
+
+  /** 🔥 REQUIRED FIELD */
+  emailVerified: false,
+
+  role: "worker",
+  accountStatus: "pending",
+  knowledgeScore: score,
+  demoTaskCompleted: false,
+  createdAt: new Date().toISOString(),
+  balance: 0,
+};
+
 
 
       await setDoc(doc(db, "users", user.uid), newUser);
@@ -596,19 +601,24 @@ export default function Signup() {
         id: user.uid,
         email: user.email || "",
         password: "",
-        fullName: username,
-        phone: "",
-        experience: "",
-        timezone: "",
-        preferredWeeklyPayout: 0,
-        skills: [],
+        fullName: formData.fullName,
+        phone: formData.phone,
+        skills: selectedSkills,
+        experience: formData.experience,
+        timezone: formData.timezone,
+        preferredWeeklyPayout: formData.preferredWeeklyPayout,
+
+        /** 🔥 REQUIRED FIELD */
+        emailVerified: false,
+
+        role: "worker",
         accountStatus: "pending",
-        role: "worker" as const,
-        knowledgeScore: 0,
+        knowledgeScore: score,
         demoTaskCompleted: false,
         createdAt: new Date().toISOString(),
         balance: 0,
       };
+
 
       await setDoc(doc(db, "users", user.uid), newUser);
       storage.setCurrentUser(newUser);
@@ -623,41 +633,41 @@ export default function Signup() {
   /* ============================================================
      EMAIL + PASSWORD SIGNUP (Verification Required)
   ============================================================ */
-const handleEmailSignup = async () => {
-  try {
-    const result = await firebaseSignup(formData.email, formData.password);
-    const user = result.user;
+  const handleEmailSignup = async () => {
+    try {
+      const result = await firebaseSignup(formData.email, formData.password);
+      const user = result.user;
 
-    // Send verification email already handled
-    alert("Verification email sent! Please check your inbox.");
+      // Send verification email already handled
+      alert("Verification email sent! Please check your inbox.");
 
-    // Create Firestore user document
-    const newUser = {
-      uid: user.uid,
-      email: formData.email,
-      password: formData.password,
-      fullName: formData.fullName,
-      phone: formData.phone,
-      experience: formData.experience,
-      timezone: formData.timezone,
-      preferredWeeklyPayout: formData.preferredWeeklyPayout,
-      skills: selectedSkills,
-      role: "worker",
-      accountStatus: "pending",
-      knowledgeScore: 0,
-      demoTaskCompleted: false,
-      emailVerified: false,
-      createdAt: new Date().toISOString(),
-      balance: 0,
-    };
+      // Create Firestore user document
+      const newUser = {
+        uid: user.uid,
+        email: formData.email,
+        password: formData.password,
+        fullName: formData.fullName,
+        phone: formData.phone,
+        experience: formData.experience,
+        timezone: formData.timezone,
+        preferredWeeklyPayout: formData.preferredWeeklyPayout,
+        skills: selectedSkills,
+        role: "worker",
+        accountStatus: "pending",
+        knowledgeScore: 0,
+        demoTaskCompleted: false,
+        emailVerified: false,
+        createdAt: new Date().toISOString(),
+        balance: 0,
+      };
 
-    await setDoc(doc(db, "users", user.uid), newUser);
+      await setDoc(doc(db, "users", user.uid), newUser);
 
-    router.push("/login");
-  } catch (err) {
-    console.error(err);
-  }
-};
+      router.push("/login");
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
 
   /* ============================================================
@@ -855,8 +865,8 @@ const handleEmailSignup = async () => {
                     key={skill}
                     onClick={() => handleSkillToggle(skill)}
                     className={`px-4 py-2 rounded-lg border-2 ${selectedSkills.includes(skill)
-                        ? "border-indigo-600 bg-indigo-50 text-indigo-600"
-                        : "border-gray-300"
+                      ? "border-indigo-600 bg-indigo-50 text-indigo-600"
+                      : "border-gray-300"
                       }`}
                   >
                     {skill}
@@ -931,8 +941,8 @@ const handleEmailSignup = async () => {
                         setAnswers(newAns);
                       }}
                       className={`w-full text-left px-4 py-2 rounded-lg border-2 mb-2 ${answers[idx] === optIdx
-                          ? "border-indigo-600 bg-indigo-50"
-                          : "border-gray-300"
+                        ? "border-indigo-600 bg-indigo-50"
+                        : "border-gray-300"
                         }`}
                     >
                       {option}
