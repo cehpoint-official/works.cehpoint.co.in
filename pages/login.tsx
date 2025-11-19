@@ -621,11 +621,16 @@ export default function Login() {
       </Head>
 
       <div className="max-w-md w-full animate-fade-in">
-        <Link href="/">
-          <span className="text-4xl font-black bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent cursor-pointer hover:scale-110 inline-block transition-transform">
-            Cehpoint
-          </span>
-        </Link>
+        <div className="text-center mb-10">
+          <Link href="/">
+            <span className="text-4xl font-black bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent cursor-pointer hover:scale-110 inline-block transition-transform">
+              Cehpoint
+            </span>
+          </Link>
+
+          <h1 className="text-4xl font-black mt-6 text-gray-900">Welcome Back</h1>
+          <p className="text-gray-600 mt-3 text-lg">Login to continue</p>
+        </div>
         <div className="glass-card rounded-3xl premium-shadow p-10">
           {error && (
             <div className="bg-red-50 border-2 border-red-200 text-red-700 px-5 py-4 rounded-xl font-medium mb-4">
