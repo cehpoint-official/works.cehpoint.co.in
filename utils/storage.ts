@@ -159,6 +159,9 @@ import {
   createPayment as fsCreatePayment,
   listPayments as fsListPayments,
   listPaymentsByUser as fsListPaymentsByUser,
+
+ deleteTask as fsDeleteTask
+
 } from "./firestore";
 
 import type { User, Task, DailySubmission, Payment } from "./types";
@@ -205,6 +208,7 @@ export const storage = {
   async updateUser(id: string, payload: Partial<User>): Promise<User | null> {
     return await fsSetUser(id, payload);
   },
+  
 
   /* -------------------------
    * CURRENT USER (local session)
@@ -248,6 +252,10 @@ export const storage = {
   async updateTask(id: string, payload: Partial<Task>): Promise<Task | null> {
     return await fsUpdateTask(id, payload);
   },
+  
+  async deleteTask(taskId: string): Promise<void> {
+  return await fsDeleteTask(taskId);
+},
 
   /* -------------------------
    * DAILY SUBMISSIONS

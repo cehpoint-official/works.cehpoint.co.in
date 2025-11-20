@@ -85,6 +85,17 @@ export async function updateTask(taskId: string, payload: Partial<Task>) {
   return getTaskById(taskId);
 }
 
+export async function deleteTask(taskId: string): Promise<void> {
+  try {
+    await deleteDoc(doc(db, "tasks", taskId));
+    console.log("🔥 Task deleted from Firestore:", taskId);
+  } catch (err) {
+    console.error("deleteTask error:", err);
+    throw err;
+  }
+}
+
+
 // ----------------- SUBMISSIONS -----------------
 export async function createSubmission(data: Omit<DailySubmission, "id">) {
   const ref = await addDoc(collection(db, "submissions"), data);
