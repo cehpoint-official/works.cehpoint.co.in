@@ -237,7 +237,7 @@ export const storage = {
   /* -------------------------
    * TASKS
    * ------------------------- */
-  async getTasks(): Promise<Task[]> {
+  async getTasks(updatedTasks?: Task[]): Promise<Task[]> {
     return await fsListTasks();
   },
 
