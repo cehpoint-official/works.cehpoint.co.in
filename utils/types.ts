@@ -1,13 +1,31 @@
 // utils/types.ts
+
 export type AccountStatus = "pending" | "active" | "suspended" | "terminated";
 export type UserRole = "worker" | "admin";
 
+/* ============================
+   PAYOUT ACCOUNT
+============================ */
 export interface PayoutAccount {
-  accountType: string;
-  accountNumber: string;
+  accountType: "upi" | "bank";  // restrict values
   verified: boolean;
+
+  // UPI
+  upiId?: string;
+
+  // Bank details
+  accountHolderName?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankIfsc?: string;
+
+  // General / common
+  accountNumber: string; // same as UPI or bank account number
 }
 
+/* ============================
+   USER
+============================ */
 export interface User {
   id: string;
   email: string;
@@ -21,32 +39,27 @@ export interface User {
 
   preferredWeeklyPayout: number;
 
-  role: "worker" | "admin";
-  accountStatus: "pending" | "active" | "suspended" | "terminated";
+  role: UserRole;
+  accountStatus: AccountStatus;
 
   knowledgeScore: number;
   demoTaskCompleted: boolean;
   demoTaskScore?: number;
 
-  payoutAccount?: {
-    bankIfsc: string;
-    accountHolderName: string;
-    upiId: ReactNode;
-    bankName: ReactNode;
-    bankAccountNumber: any;
-    accountType: string;
-    accountNumber: string;
-    verified: boolean;
-  };
+  payoutAccount?: PayoutAccount;  // <-- use the clean interface
 
-  /** ✅ REQUIRED for login.tsx */
   emailVerified: boolean;
 
   createdAt: string;
   balance: number;
+
+  // must always exist in DB
+  uid?: string;  // Firebase Auth UID
 }
 
-
+/* ============================
+   TASK
+============================ */
 export interface Task {
   id: string;
 
@@ -58,12 +71,18 @@ export interface Task {
   weeklyPayout: number;
   deadline: string; // ISO date or '' if not provided
 
-  status: "available" | "assigned" | "in-progress" | "submitted" | "completed" | "rejected";
+  status:
+    | "available"
+    | "assigned"
+    | "in-progress"
+    | "submitted"
+    | "completed"
+    | "rejected";
 
-  createdBy: string; // admin id who created task
+  createdBy: string;
   createdAt: string;
 
-  assignedTo: string | null; // worker id or null
+  assignedTo: string | null;
   assignedAt?: string;
 
   submittedAt?: string;
@@ -73,6 +92,9 @@ export interface Task {
   feedback?: string;
 }
 
+/* ============================
+   DAILY SUBMISSION
+============================ */
 export interface DailySubmission {
   id: string;
   userId: string;
@@ -87,15 +109,21 @@ export interface DailySubmission {
   adminFeedback?: string;
 }
 
+/* ============================
+   PAYMENT
+============================ */
 export interface Payment {
   id: string;
   userId: string;
   amount: number;
   type: "task-payment" | "manual" | "bonus" | "withdrawal";
   status: "pending" | "completed" | "failed";
+
   taskId?: string;
+
   createdAt: string;
   completedAt?: string;
+
   payoutMethod?: "upi" | "bank";
   payoutMethodDetails?: string;
 }
