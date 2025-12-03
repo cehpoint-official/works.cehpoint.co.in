@@ -29,6 +29,11 @@ export interface User {
   demoTaskScore?: number;
 
   payoutAccount?: {
+    bankIfsc: string;
+    accountHolderName: string;
+    upiId: ReactNode;
+    bankName: ReactNode;
+    bankAccountNumber: any;
     accountType: string;
     accountNumber: string;
     verified: boolean;
@@ -91,4 +96,6 @@ export interface Payment {
   taskId?: string;
   createdAt: string;
   completedAt?: string;
+  payoutMethod?: "upi" | "bank";
+  payoutMethodDetails?: string;
 }
