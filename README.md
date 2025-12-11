@@ -27,7 +27,7 @@
 
 ### **Admin Task Manager**
 
-![Admin Tasks](https://i.imgur.com/DQC7qi1.png)
+![Admin Tasks](https://github.com/user-attachments/assets/3027e180-5122-4b22-ac75-73c0a3126928)
 
 ---
 
