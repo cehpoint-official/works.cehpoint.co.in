@@ -25,7 +25,7 @@ A task-based work platform with worker dashboards, admin controls, payouts, and 
 
 ### **Worker Dashboard**
 
-![Worker Dashboard](https://i.imgur.com/7RCQYQg.png)
+![Worker Dashboard](https://github.com/user-attachments/assets/6a24bac5-2fda-4c5a-bd43-1eb3ee84beb5)
 
 ### **Admin Task Manager**
 
