@@ -5,7 +5,7 @@ A task-based work platform with worker dashboards, admin controls, payouts, and 
 *A modern task-based workforce & payout management system built with Next.js + Firebase.*
 
 <p align="center">
-  <img src="https://i.imgur.com/gceC2lK.png" width="500" />
+  <img src="https://github.com/user-attachments/assets/db8d9d36-13c8-4b99-bd38-a2f879550138"/>
 </p>
 
 ---
