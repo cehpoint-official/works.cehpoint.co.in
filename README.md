@@ -35,7 +35,7 @@ A task-based work platform with worker dashboards, admin controls, payouts, and 
 
 ## 🧭 System Architecture
 <p align="center">
-  <img src="https://i.imgur.com/uq1zIzd.png" width="700"/>
+  <img src="https://github.com/user-attachments/assets/6bcd638d-6118-4686-966a-79f44a21885c"/>
 </p>
 
 
