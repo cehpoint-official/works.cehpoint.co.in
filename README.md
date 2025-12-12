@@ -121,4 +121,4 @@ NEXT_PUBLIC_FIREBASE_APP_ID=
 ## 👤 **Contributer**
 
 **Sarthak Roy**
-GitHub: [https://github.com/cehpoint-official](https://github.com/cehpoint-official)
+GitHub: [https://github.com/cehpoint-official](https://github.com/cehpoint-official](https://github.com/Sarthak4321)
