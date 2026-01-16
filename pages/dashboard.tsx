@@ -116,11 +116,22 @@ export default function Dashboard() {
     setMyTasks(tasks.filter((t) => t.assignedTo === currentUser.id));
 
     setAvailableTasks(
-      tasks.filter(
-        (t) =>
-          t.status === "available" &&
-          t.skills?.some((skill) => skills.includes(skill))
-      )
+      tasks.filter((t) => {
+        // Must be available
+        if (t.status !== "available") return false;
+
+        // Check filtering/broadcasting logic
+        // 1. If it has candidate restrictions, I MUST be in the list
+        if (t.candidateWorkerIds && t.candidateWorkerIds.length > 0) {
+          return t.candidateWorkerIds.includes(currentUser.id);
+        }
+
+        // 2. If it is open (no candidates), fall back to skill matching or just show it
+        // The previous logic was: t.skills?.some(s => skills.includes(s))
+        // But let's align with "Open" meaning open for anyone, OR we can keep skill matching for relevance.
+        // For consistency with tasks.tsx which shows "Open" tasks to everyone:
+        return true;
+      })
     );
 
     const subs = await storage.getSubmissionsByUser(currentUser.id);
@@ -398,11 +409,10 @@ export default function Dashboard() {
                     key={skill}
                     type="button"
                     onClick={() => handleSkillToggle(skill)}
-                    className={`px-3 py-2 rounded-lg border text-sm transition ${
-                      profileForm.skills.includes(skill)
+                    className={`px-3 py-2 rounded-lg border text-sm transition ${profileForm.skills.includes(skill)
                         ? "border-indigo-600 bg-indigo-100 text-indigo-700"
                         : "border-gray-300 hover:border-gray-400"
-                    }`}
+                      }`}
                   >
                     {skill}
                   </button>
@@ -422,11 +432,10 @@ export default function Dashboard() {
         <div className="flex flex-wrap gap-2 md:gap-4 border-b-2 border-gray-200">
           <button
             onClick={() => setActiveTab("overview")}
-            className={`px-4 md:px-6 py-2 md:py-3 font-bold text-sm md:text-lg transition-all ${
-              activeTab === "overview"
+            className={`px-4 md:px-6 py-2 md:py-3 font-bold text-sm md:text-lg transition-all ${activeTab === "overview"
                 ? "text-indigo-600 border-b-4 border-indigo-600 -mb-0.5"
                 : "text-gray-600 hover:text-gray-900"
-            }`}
+              }`}
           >
             <div className="flex items-center gap-2">
               <Briefcase size={18} className="md:size-5" />
@@ -435,11 +444,10 @@ export default function Dashboard() {
           </button>
           <button
             onClick={() => setActiveTab("daily-work")}
-            className={`px-4 md:px-6 py-2 md:py-3 font-bold text-sm md:text-lg transition-all ${
-              activeTab === "daily-work"
+            className={`px-4 md:px-6 py-2 md:py-3 font-bold text-sm md:text-lg transition-all ${activeTab === "daily-work"
                 ? "text-indigo-600 border-b-4 border-indigo-600 -mb-0.5"
                 : "text-gray-600 hover:text-gray-900"
-            }`}
+              }`}
           >
             <div className="flex items-center gap-2">
               <Calendar size={18} className="md:size-5" />
@@ -515,7 +523,7 @@ export default function Dashboard() {
                   My Active Tasks
                 </h2>
                 {myTasks.filter((t) => t.status === "in-progress").length ===
-                0 ? (
+                  0 ? (
                   <p className="text-gray-500 text-center py-8 text-sm md:text-base">
                     No active tasks
                   </p>

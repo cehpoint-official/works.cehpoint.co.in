@@ -150,3 +150,29 @@ export async function listSubmissionsByUser(userId: string) {
   return snap.docs.map(d => ({ id: d.id, ...(d.data() as DailySubmission) })) as DailySubmission[];
 }
 
+// ----------------- SKILLS -----------------
+const skillsCol = collection(db, "skills");
+
+export async function getSkills(): Promise<string[]> {
+  try {
+    const snap = await getDocs(skillsCol);
+    return snap.docs.map((d) => d.data().name as string);
+  } catch (err) {
+    console.warn("Failed to fetch skills", err);
+    return [];
+  }
+}
+
+export async function addSkill(skill: string) {
+  try {
+    // Use normalized lowercase ID to prevent duplicates
+    const id = skill.toLowerCase().trim();
+    if (!id) return;
+    const ref = doc(db, "skills", id);
+    // Store original casing in 'name'
+    await setDoc(ref, { name: skill.trim() }, { merge: true });
+  } catch (err) {
+    console.error("Failed to add skill", err);
+  }
+}
+

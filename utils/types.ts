@@ -249,18 +249,21 @@ export interface Task {
   deadline: string;
 
   status:
-    | "available"
-    | "assigned"
-    | "in-progress"
-    | "submitted"
-    | "completed"
-    | "rejected";
+  | "available"
+  | "assigned"
+  | "in-progress"
+  | "submitted"
+  | "completed"
+  | "rejected";
 
   createdBy: string;
   createdAt: string;
 
   assignedTo: string | null;
   assignedAt?: string;
+
+  // 🔹 Workers who passed the filter and can see/accept this task
+  candidateWorkerIds?: string[];
 
   submittedAt?: string;
   submissionUrl?: string;

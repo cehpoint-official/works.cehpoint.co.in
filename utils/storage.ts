@@ -160,10 +160,17 @@ import {
   listPayments as fsListPayments,
   listPaymentsByUser as fsListPaymentsByUser,
 
- deleteTask as fsDeleteTask,
- updatePayment as fsUpdatePayment
+  deleteTask as fsDeleteTask,
+  updatePayment as fsUpdatePayment,
+
+  getSkills as fsGetSkills,
+  addSkill as fsAddSkill
+
 
 } from "./firestore";
+
+import { storage as firebaseStorage } from "./firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 import type { User, Task, DailySubmission, Payment } from "./types";
 
@@ -187,8 +194,8 @@ export const storage = {
     return await fsListPaymentsByUser(userId);
   },
   async updatePayment(id: string, payload: Partial<Payment>) {
-  return await fsUpdatePayment(id, payload);
-},
+    return await fsUpdatePayment(id, payload);
+  },
 
 
   /* -------------------------
@@ -213,7 +220,7 @@ export const storage = {
   async updateUser(id: string, payload: Partial<User>): Promise<User | null> {
     return await fsSetUser(id, payload);
   },
-  
+
 
   /* -------------------------
    * CURRENT USER (local session)
@@ -257,10 +264,10 @@ export const storage = {
   async updateTask(id: string, payload: Partial<Task>): Promise<Task | null> {
     return await fsUpdateTask(id, payload);
   },
-  
+
   async deleteTask(taskId: string): Promise<void> {
-  return await fsDeleteTask(taskId);
-},
+    return await fsDeleteTask(taskId);
+  },
 
   /* -------------------------
    * DAILY SUBMISSIONS
@@ -279,6 +286,44 @@ export const storage = {
 
   async updateSubmission(id: string, payload: Partial<DailySubmission>): Promise<void> {
     return await fsUpdateSubmission(id, payload);
+  },
+
+  /* -------------------------
+   * SKILLS
+   * ------------------------- */
+  async getSkills(): Promise<string[]> {
+    return await fsGetSkills();
+  },
+
+  async addSkill(skill: string): Promise<void> {
+    return await fsAddSkill(skill);
+  },
+
+  /* -------------------------
+   * STORAGE / FILES
+   * ------------------------- */
+  async uploadSubmissionFile(file: File, path: string): Promise<string> {
+    console.log(`[Storage] Starting upload for ${file.name} to ${path}`);
+
+    if (!firebaseStorage) {
+      console.error("[Storage] Firebase Storage instance is missing. Check firebase.ts init.");
+      throw new Error("Firebase Storage not initialized");
+    }
+
+    try {
+      const storageRef = ref(firebaseStorage, path);
+      console.log("[Storage] Reference created, starting uploadBytes...");
+
+      const snapshot = await uploadBytes(storageRef, file);
+      console.log("[Storage] Upload successful, fetching download URL...");
+
+      const url = await getDownloadURL(snapshot.ref);
+      console.log("[Storage] Download URL retrieved:", url);
+      return url;
+    } catch (error) {
+      console.error("[Storage] Error uploading file:", error);
+      throw error;
+    }
   },
 };
 
