@@ -15,6 +15,19 @@ import {
 } from "firebase/firestore";
 import type { User, Task, DailySubmission } from "./types";
 
+// Helper to remove any 'undefined' values (Firestore rejects them)
+function cleanObject(obj: any): any {
+  if (obj === null || typeof obj !== 'object') return obj;
+  const cleaned: any = {};
+  Object.keys(obj).forEach((key) => {
+    if (obj[key] !== undefined) {
+      cleaned[key] = cleanObject(obj[key]);
+    }
+  });
+  return cleaned;
+}
+
+
 const usersCol = collection(db, "users");
 const tasksCol = collection(db, "tasks");
 const submissionsCol = collection(db, "submissions");
@@ -22,13 +35,15 @@ const submissionsCol = collection(db, "submissions");
 // ----------------- USERS -----------------
 export async function createUser(user: Omit<User, "id">) {
   // add doc with auto-id
-  const ref = await addDoc(usersCol, user as any);
+  const cleaned = cleanObject(user);
+  const ref = await addDoc(usersCol, cleaned);
   return { id: ref.id, ...user } as User;
 }
 
 export async function setUser(userId: string, user: Partial<User>) {
   const ref = doc(db, "users", userId);
-  await setDoc(ref, user, { merge: true });
+  const cleaned = cleanObject(user);
+  await setDoc(ref, cleaned, { merge: true });
   const snap = await getDoc(ref);
   return { id: snap.id, ...(snap.data() as User) } as User;
 }
@@ -54,7 +69,8 @@ export async function listUsers() {
 
 export async function updateUser(userId: string, payload: Partial<User>) {
   const ref = doc(db, "users", userId);
-  await updateDoc(ref, payload as any);
+  const cleaned = cleanObject(payload);
+  await updateDoc(ref, cleaned);
   return getUserById(userId);
 }
 
@@ -64,7 +80,8 @@ export async function deleteUser(userId: string) {
 
 // ----------------- TASKS -----------------
 export async function createTask(task: Omit<Task, "id">) {
-  const ref = await addDoc(tasksCol, task as any);
+  const cleaned = cleanObject(task);
+  const ref = await addDoc(tasksCol, cleaned);
   return { id: ref.id, ...task } as Task;
 }
 
@@ -81,7 +98,8 @@ export async function getTaskById(taskId: string) {
 
 export async function updateTask(taskId: string, payload: Partial<Task>) {
   const ref = doc(db, "tasks", taskId);
-  await updateDoc(ref, payload as any);
+  const cleaned = cleanObject(payload);
+  await updateDoc(ref, cleaned);
   return getTaskById(taskId);
 }
 
@@ -98,7 +116,8 @@ export async function deleteTask(taskId: string): Promise<void> {
 
 // ----------------- SUBMISSIONS -----------------
 export async function createSubmission(data: Omit<DailySubmission, "id">) {
-  const ref = await addDoc(collection(db, "submissions"), data);
+  const cleaned = cleanObject(data);
+  const ref = await addDoc(collection(db, "submissions"), cleaned);
   return { id: ref.id, ...data };
 }
 
@@ -108,7 +127,8 @@ import type { Payment } from "./types";
 const paymentsCol = collection(db, "payments");
 
 export async function createPayment(data: Omit<Payment, "id">) {
-  const ref = await addDoc(paymentsCol, data);
+  const cleaned = cleanObject(data);
+  const ref = await addDoc(paymentsCol, cleaned);
   return { id: ref.id, ...data } as Payment;
 }
 
@@ -125,7 +145,8 @@ export async function listPayments() {
 
 export async function updatePayment(id: string, payload: Partial<Payment>) {
   const ref = doc(db, "payments", id);
-  await updateDoc(ref, payload);
+  const cleaned = cleanObject(payload);
+  await updateDoc(ref, cleaned);
   return id;
 }
 
@@ -135,7 +156,8 @@ export async function updateSubmission(
   id: string,
   payload: Partial<DailySubmission>
 ): Promise<void> {
-  await updateDoc(doc(db, "submissions", id), payload);
+  const cleaned = cleanObject(payload);
+  await updateDoc(doc(db, "submissions", id), cleaned);
 }
 
 
@@ -174,5 +196,26 @@ export async function addSkill(skill: string) {
   } catch (err) {
     console.error("Failed to add skill", err);
   }
+}
+
+// ----------------- NOTIFICATIONS -----------------
+import type { Notification } from "./types";
+const notificationsCol = collection(db, "notifications");
+
+export async function createNotification(data: Omit<Notification, "id">) {
+  const cleaned = cleanObject(data);
+  const ref = await addDoc(notificationsCol, cleaned);
+  return { id: ref.id, ...data } as Notification;
+}
+
+export async function listNotifications(userId: string) {
+  const q = query(notificationsCol, where("userId", "==", userId), orderBy("createdAt", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...(d.data() as Notification) })) as Notification[];
+}
+
+export async function markNotificationRead(id: string) {
+  const ref = doc(db, "notifications", id);
+  await updateDoc(ref, { read: true });
 }
 

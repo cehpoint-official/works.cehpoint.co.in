@@ -2,19 +2,19 @@
 
 @tailwind base;
 @tailwind components;
-@tailwind utilities; 
+@tailwind utilities;
 
 :root {
-  --primary: #6366f1;
-  --primary-dark: #4f46e5;
-  --secondary: #10b981;
-  --background: #f9fafb;
+  --primary: #4f46e5;
+  --primary-glow: rgba(79, 70, 229, 0.15);
+  --secondary: #0ea5e9;
+  --background: #f8fafc;
   --card: #ffffff;
-  --text: #1f2937;
-  --text-light: #6b7280;
-  --border: #e5e7eb;
-  --danger: #ef4444;
-  --warning: #f59e0b;
+  --foreground: #0f172a;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --success: #10b981;
+  --error: #ef4444;
 }
 
 * {
@@ -28,17 +28,15 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.01em;
 }
 
 body {
   background-color: var(--background);
-  color: var(--text);
+  color: var(--foreground);
 }
 
 a {
@@ -46,7 +44,7 @@ a {
   text-decoration: none;
 }
 
-@layer utilities {
+@layer components {
   .text-balance {
     text-wrap: balance;
   }
@@ -91,21 +89,19 @@ a {
   }
 
   .glass-effect {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
 
   .card-hover {
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .card-hover:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 20px 60px -12px rgba(99, 102, 241, 0.25),
-      0 12px 30px -12px rgba(99, 102, 241, 0.15);
-    border-color: rgba(99, 102, 241, 0.1);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.08);
+    border-color: var(--primary-glow);
   }
 
   @keyframes fadeIn {
@@ -217,5 +213,4 @@ a {
   .mobile-nav-btn {
     @apply flex items-center space-x-2 w-full px-4 py-3 rounded-lg hover:bg-gray-100 transition text-gray-800;
   }
-
 }

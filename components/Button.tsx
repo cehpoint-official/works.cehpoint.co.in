@@ -19,13 +19,13 @@ export default function Button({
   className = '',
   fullWidth = false,
 }: ButtonProps) {
-  const baseStyles = 'px-8 py-4 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 btn-shimmer shadow-lg hover:shadow-2xl text-base';
-  
+  const baseStyles = 'px-6 h-10 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 shadow-sm active:scale-95 text-sm whitespace-nowrap';
+
   const variants = {
-    primary: 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:scale-105 disabled:from-gray-300 disabled:to-gray-400 disabled:hover:scale-100 disabled:cursor-not-allowed',
-    secondary: 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:scale-105 disabled:from-gray-300 disabled:to-gray-400 disabled:hover:scale-100 disabled:cursor-not-allowed',
-    danger: 'bg-gradient-to-r from-red-500 to-rose-600 text-white hover:from-red-600 hover:to-rose-700 hover:scale-105 disabled:from-gray-300 disabled:to-gray-400 disabled:hover:scale-100 disabled:cursor-not-allowed',
-    outline: 'border-2 border-indigo-600 text-indigo-600 bg-transparent hover:bg-indigo-50 hover:border-indigo-700 hover:scale-105 disabled:border-gray-300 disabled:text-gray-300 disabled:hover:scale-100 disabled:cursor-not-allowed',
+    primary: 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed',
+    secondary: 'bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed',
+    danger: 'bg-red-600 text-white hover:bg-red-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed',
+    outline: 'border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-300 disabled:border-gray-200 disabled:text-gray-300 disabled:cursor-not-allowed',
   };
 
   const widthClass = fullWidth ? 'w-full' : '';

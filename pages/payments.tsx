@@ -1,5 +1,6 @@
 // pages/payments.tsx
 import { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { useRouter } from "next/router";
 import Head from "next/head";
 
@@ -130,7 +131,7 @@ export default function Payments() {
       }
     } catch (err) {
       console.error("Failed to load payments:", err);
-      alert("Failed to load payments.");
+      toast.error("Failed to load payments.");
     } finally {
       setLoading(false);
     }
@@ -157,7 +158,7 @@ export default function Payments() {
       setUser(updatedUser);
     } catch (err) {
       console.error("Failed to update currency preference:", err);
-      alert("Failed to update currency preference.");
+      toast.error("Failed to update currency preference.");
     } finally {
       setUpdatingCurrency(false);
     }
@@ -175,7 +176,7 @@ export default function Payments() {
       // validate based on type
       if (payoutType === "upi") {
         if (!upiId.trim()) {
-          alert("Please enter a valid UPI ID");
+          toast.error("Please enter a valid UPI ID");
           setSavingPayout(false);
           return;
         }
@@ -186,19 +187,19 @@ export default function Payments() {
           !bankAccountNumber.trim() ||
           !bankIfsc.trim()
         ) {
-          alert("Please fill all bank details");
+          toast.error("Please fill all bank details");
           setSavingPayout(false);
           return;
         }
       } else if (payoutType === "paypal") {
         if (!paypalEmail.trim()) {
-          alert("Please enter your PayPal email");
+          toast.error("Please enter your PayPal email");
           setSavingPayout(false);
           return;
         }
       } else if (payoutType === "crypto") {
         if (!cryptoNetwork.trim() || !cryptoAddress.trim()) {
-          alert("Please fill crypto network and address");
+          toast.error("Please fill crypto network and address");
           setSavingPayout(false);
           return;
         }
@@ -254,10 +255,10 @@ export default function Payments() {
       setWithdrawMethod(payoutType);
       setShowPayoutForm(false);
 
-      alert("Payout details saved successfully.");
+      toast.success("Payout details saved successfully.");
     } catch (err) {
       console.error("Failed to save payout details:", err);
-      alert("Failed to save payout details.");
+      toast.error("Failed to save payout details.");
     } finally {
       setSavingPayout(false);
     }
@@ -272,7 +273,7 @@ export default function Payments() {
     const enteredDisplayAmount = parseFloat(withdrawAmount);
 
     if (isNaN(enteredDisplayAmount) || enteredDisplayAmount <= 0) {
-      alert("Enter a valid amount");
+      toast.error("Enter a valid amount");
       return;
     }
 
@@ -280,7 +281,7 @@ export default function Payments() {
     const baseAmount = toBase(enteredDisplayAmount, currency);
 
     if (baseAmount > user.balance) {
-      alert("Insufficient balance");
+      toast.error("Insufficient balance");
       return;
     }
 
@@ -291,27 +292,27 @@ export default function Payments() {
     const hasCrypto = !!pa?.cryptoAddress;
 
     if (!pa || (!hasUpi && !hasBank && !hasPaypal && !hasCrypto)) {
-      alert("Please add payout details before requesting a withdrawal.");
+      toast.error("Please add payout details before requesting a withdrawal.");
       return;
     }
 
     if (withdrawMethod === "upi" && !hasUpi) {
-      alert("You have not added a UPI ID yet.");
+      toast.error("You have not added a UPI ID yet.");
       return;
     }
 
     if (withdrawMethod === "bank" && !hasBank) {
-      alert("You have not added bank details yet.");
+      toast.error("You have not added bank details yet.");
       return;
     }
 
     if (withdrawMethod === "paypal" && !hasPaypal) {
-      alert("You have not added a PayPal email yet.");
+      toast.error("You have not added a PayPal email yet.");
       return;
     }
 
     if (withdrawMethod === "crypto" && !hasCrypto) {
-      alert("You have not added a crypto address yet.");
+      toast.error("You have not added a crypto address yet.");
       return;
     }
 
@@ -324,9 +325,8 @@ export default function Payments() {
     } else if (withdrawMethod === "paypal") {
       payoutMethodDetails = `PayPal: ${pa!.paypalEmail}`;
     } else if (withdrawMethod === "crypto") {
-      payoutMethodDetails = `Crypto: ${pa!.cryptoNetwork ?? ""} - ${
-        pa!.cryptoAddress ?? ""
-      }`;
+      payoutMethodDetails = `Crypto: ${pa!.cryptoNetwork ?? ""} - ${pa!.cryptoAddress ?? ""
+        }`;
     }
 
     setSubmitting(true);
@@ -344,14 +344,30 @@ export default function Payments() {
 
       await storage.createPayment(paymentPayload);
 
-      alert("Withdrawal request sent to admin for approval.");
+      // Notify Admins
+      const allUsers = await storage.getUsers();
+      const admins = allUsers.filter(u => u.role === 'admin');
+
+      await Promise.all(admins.map(admin =>
+        storage.createNotification({
+          userId: admin.id,
+          title: "New Payout Request",
+          message: `${user.fullName} requested ${formatMoney(baseAmount, "USD")} withdrawal via ${withdrawMethod.toUpperCase()}.`,
+          type: "warning",
+          read: false,
+          createdAt: new Date().toISOString(),
+          link: "/admin/workers"
+        })
+      )).catch(e => console.error("Admin notification failed", e));
+
+      toast.success("Withdrawal request sent to admin for approval.");
 
       setWithdrawAmount("");
       setShowWithdraw(false);
       await loadPayments(user.id);
     } catch (err) {
       console.error("Withdrawal error:", err);
-      alert("Failed to submit withdrawal request.");
+      toast.error("Failed to submit withdrawal request.");
     } finally {
       setSubmitting(false);
     }
@@ -386,7 +402,7 @@ export default function Payments() {
           <h1 className="text-3xl font-bold text-gray-900">
             Payments &amp; Earnings
           </h1>
-         
+
 
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Display currency:</span>
@@ -403,7 +419,7 @@ export default function Payments() {
             </select>
           </div>
 
-           <Button onClick={() => setShowWithdraw((s) => !s)}> <Download size={18} /> <span className="">Withdraw</span> </Button>
+          <Button onClick={() => setShowWithdraw((s) => !s)}> <Download size={18} /> <span className="">Withdraw</span> </Button>
         </div>
 
         {/* SUMMARY CARDS */}
@@ -469,11 +485,10 @@ export default function Payments() {
                   <button
                     type="button"
                     onClick={() => setWithdrawMethod("upi")}
-                    className={`px-4 py-2 rounded-lg border ${
-                      withdrawMethod === "upi"
-                        ? "border-indigo-600 bg-indigo-50"
-                        : "border-gray-300"
-                    }`}
+                    className={`px-4 py-2 rounded-lg border ${withdrawMethod === "upi"
+                      ? "border-indigo-600 bg-indigo-50"
+                      : "border-gray-300"
+                      }`}
                     disabled={!hasUpi}
                   >
                     UPI
@@ -481,11 +496,10 @@ export default function Payments() {
                   <button
                     type="button"
                     onClick={() => setWithdrawMethod("bank")}
-                    className={`px-4 py-2 rounded-lg border ${
-                      withdrawMethod === "bank"
-                        ? "border-indigo-600 bg-indigo-50"
-                        : "border-gray-300"
-                    }`}
+                    className={`px-4 py-2 rounded-lg border ${withdrawMethod === "bank"
+                      ? "border-indigo-600 bg-indigo-50"
+                      : "border-gray-300"
+                      }`}
                     disabled={!hasBank}
                   >
                     Bank
@@ -493,11 +507,10 @@ export default function Payments() {
                   <button
                     type="button"
                     onClick={() => setWithdrawMethod("paypal")}
-                    className={`px-4 py-2 rounded-lg border ${
-                      withdrawMethod === "paypal"
-                        ? "border-indigo-600 bg-indigo-50"
-                        : "border-gray-300"
-                    }`}
+                    className={`px-4 py-2 rounded-lg border ${withdrawMethod === "paypal"
+                      ? "border-indigo-600 bg-indigo-50"
+                      : "border-gray-300"
+                      }`}
                     disabled={!hasPaypal}
                   >
                     PayPal
@@ -505,11 +518,10 @@ export default function Payments() {
                   <button
                     type="button"
                     onClick={() => setWithdrawMethod("crypto")}
-                    className={`px-4 py-2 rounded-lg border ${
-                      withdrawMethod === "crypto"
-                        ? "border-indigo-600 bg-indigo-50"
-                        : "border-gray-300"
-                    }`}
+                    className={`px-4 py-2 rounded-lg border ${withdrawMethod === "crypto"
+                      ? "border-indigo-600 bg-indigo-50"
+                      : "border-gray-300"
+                      }`}
                     disabled={!hasCrypto}
                   >
                     Crypto
@@ -564,10 +576,10 @@ export default function Payments() {
                 {user.payoutAccount.accountType === "upi"
                   ? "UPI"
                   : user.payoutAccount.accountType === "bank"
-                  ? "Bank"
-                  : user.payoutAccount.accountType === "paypal"
-                  ? "PayPal"
-                  : "Crypto"}
+                    ? "Bank"
+                    : user.payoutAccount.accountType === "paypal"
+                      ? "PayPal"
+                      : "Crypto"}
               </p>
 
               {user.payoutAccount.accountType === "upi" && (
@@ -635,44 +647,40 @@ export default function Payments() {
                   <button
                     type="button"
                     onClick={() => setPayoutType("upi")}
-                    className={`px-4 py-2 rounded-lg border ${
-                      payoutType === "upi"
-                        ? "border-indigo-600 bg-indigo-50"
-                        : "border-gray-300"
-                    }`}
+                    className={`px-4 py-2 rounded-lg border ${payoutType === "upi"
+                      ? "border-indigo-600 bg-indigo-50"
+                      : "border-gray-300"
+                      }`}
                   >
                     UPI
                   </button>
                   <button
                     type="button"
                     onClick={() => setPayoutType("bank")}
-                    className={`px-4 py-2 rounded-lg border ${
-                      payoutType === "bank"
-                        ? "border-indigo-600 bg-indigo-50"
-                        : "border-gray-300"
-                    }`}
+                    className={`px-4 py-2 rounded-lg border ${payoutType === "bank"
+                      ? "border-indigo-600 bg-indigo-50"
+                      : "border-gray-300"
+                      }`}
                   >
                     Bank
                   </button>
                   <button
                     type="button"
                     onClick={() => setPayoutType("paypal")}
-                    className={`px-4 py-2 rounded-lg border ${
-                      payoutType === "paypal"
-                        ? "border-indigo-600 bg-indigo-50"
-                        : "border-gray-300"
-                    }`}
+                    className={`px-4 py-2 rounded-lg border ${payoutType === "paypal"
+                      ? "border-indigo-600 bg-indigo-50"
+                      : "border-gray-300"
+                      }`}
                   >
                     PayPal
                   </button>
                   <button
                     type="button"
                     onClick={() => setPayoutType("crypto")}
-                    className={`px-4 py-2 rounded-lg border ${
-                      payoutType === "crypto"
-                        ? "border-indigo-600 bg-indigo-50"
-                        : "border-gray-300"
-                    }`}
+                    className={`px-4 py-2 rounded-lg border ${payoutType === "crypto"
+                      ? "border-indigo-600 bg-indigo-50"
+                      : "border-gray-300"
+                      }`}
                   >
                     Crypto
                   </button>
@@ -844,21 +852,19 @@ export default function Payments() {
                     </div>
                     <div className="text-right">
                       <p
-                        className={`font-semibold ${
-                          isTaskPayment ? "text-green-600" : "text-red-600"
-                        }`}
+                        className={`font-semibold ${isTaskPayment ? "text-green-600" : "text-red-600"
+                          }`}
                       >
                         {isTaskPayment ? "+" : "-"}
                         {formatMoney(payment.amount, currency)}
                       </p>
                       <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          payment.status === "completed"
-                            ? "bg-green-100 text-green-700"
-                            : payment.status === "pending"
+                        className={`text-xs px-2 py-1 rounded ${payment.status === "completed"
+                          ? "bg-green-100 text-green-700"
+                          : payment.status === "pending"
                             ? "bg-yellow-100 text-yellow-700"
                             : "bg-red-100 text-red-700"
-                        }`}
+                          }`}
                       >
                         {statusLabel}
                       </span>

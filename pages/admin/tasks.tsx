@@ -1,5 +1,6 @@
 // pages/admin/tasks.tsx
 import { useEffect, useState, ChangeEvent } from "react";
+import { toast } from "react-hot-toast";
 import { useRouter } from "next/router";
 import Head from "next/head";
 
@@ -10,8 +11,26 @@ import Button from "../../components/Button";
 import { storage } from "../../utils/storage";
 import type { User, Task, Payment, Currency } from "../../utils/types";
 import { findWorkerForTask, AssignmentExplanation } from "../../utils/taskAssignment";
+import { mailService } from "../../utils/mailService";
 
-import { Plus } from "lucide-react";
+import {
+  Plus,
+  Rocket,
+  Globe,
+  Link as LinkIcon,
+  Clock,
+  Paperclip,
+  FileText,
+  Bug,
+  ClipboardList,
+  ChevronDown,
+  ChevronUp,
+  User as UserIcon,
+  Calendar,
+  ExternalLink
+} from "lucide-react";
+
+import { format } from "date-fns";
 
 type NewTaskForm = {
   title: string;
@@ -20,6 +39,8 @@ type NewTaskForm = {
   skills: string[];
   weeklyPayout: number; // stored in base USD
   deadline: string;
+  projectDetails: string;
+  helperEmail: string;
 };
 
 const INR_RATE = 89; // 🔹 simple fixed rate
@@ -55,6 +76,8 @@ export default function AdminTasks() {
     skills: [],
     weeklyPayout: 0, // stored as USD
     deadline: "",
+    projectDetails: "",
+    helperEmail: "",
   });
 
   // 🔹 Separate string state for the Weekly Payout input
@@ -80,6 +103,24 @@ export default function AdminTasks() {
     cleanPayload: null
   });
 
+  // 🔹 Expansion state for task cards
+  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
+
+  const toggleExpand = (taskId: string) => {
+    setExpandedTasks(prev => ({ ...prev, [taskId]: !prev[taskId] }));
+  };
+
+  // 🔹 Rejection Modal State
+  const [rejectionModal, setRejectionModal] = useState<{
+    visible: boolean;
+    taskId: string | null;
+    reason: string;
+  }>({
+    visible: false,
+    taskId: null,
+    reason: ""
+  });
+
   // 🔹 Dynamic Skills
   const [availableSkills, setAvailableSkills] = useState<string[]>([
     "React", "Node.js", "Python", "Java", "PHP", "Angular", "Vue.js",
@@ -87,8 +128,6 @@ export default function AdminTasks() {
     "UI/UX Design", "Graphic Design", "Content Writing",
     "Digital Marketing", "SEO"
   ]);
-
-
 
   /* -------------------------------------------------------
    * AUTH + INITIAL LOAD
@@ -116,7 +155,6 @@ export default function AdminTasks() {
         ]);
 
         if (dbSkills && dbSkills.length > 0) {
-          // Merge DB skills with default, removing duplicates
           setAvailableSkills(prev => Array.from(new Set([...prev, ...dbSkills])));
         }
 
@@ -132,7 +170,7 @@ export default function AdminTasks() {
         );
       } catch (err) {
         console.error("Failed to load admin data:", err);
-        alert("Failed to load admin data. Please check console.");
+        toast.error("Failed to load admin data.");
       } finally {
         if (mounted) setPageLoading(false);
       }
@@ -159,14 +197,13 @@ export default function AdminTasks() {
     const trimmed = customSkill.trim();
     if (!trimmed) return;
     if (newTask.skills.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
-      alert("Skill already added");
+      toast.error("Skill already added");
       return;
     }
     setNewTask(prev => ({
       ...prev,
       skills: [...prev.skills, trimmed]
     }));
-    // Add to available list so it shows up in the grid
     setAvailableSkills(prev => {
       if (prev.some(s => s.toLowerCase() === trimmed.toLowerCase())) return prev;
       return [...prev, trimmed];
@@ -174,9 +211,6 @@ export default function AdminTasks() {
     setCustomSkill("");
   };
 
-  /* -------------------------------------------------------
-   * HANDLE CURRENCY CHANGE
-   * ----------------------------------------------------- */
   const handleCurrencyChange = async (value: Currency) => {
     if (!currentAdmin) return;
     if (value === currency) return;
@@ -195,19 +229,14 @@ export default function AdminTasks() {
       setCurrentAdmin(updated);
     } catch (err) {
       console.error("Failed to update currency preference:", err);
-      alert("Failed to update currency preference.");
+      toast.error("Failed to update currency preference.");
     } finally {
       setUpdatingCurrency(false);
     }
   };
 
-  /* -------------------------------------------------------
-   * WEEKLY PAYOUT INPUT HANDLER (FIXED)
-   * ----------------------------------------------------- */
   const handleWeeklyPayoutChange = (e: ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
-
-    // Allow the field to be completely empty while typing
     setWeeklyPayoutInput(raw);
 
     if (raw === "") {
@@ -216,17 +245,12 @@ export default function AdminTasks() {
     }
 
     const val = parseFloat(raw);
-    if (isNaN(val)) {
-      return;
-    }
+    if (isNaN(val)) return;
 
     const baseUsd = toBase(val, currency);
     setNewTask((prev) => ({ ...prev, weeklyPayout: baseUsd }));
   };
 
-  /* -------------------------------------------------------
-   * CREATE TASK
-   * ----------------------------------------------------- */
   const handleCreateTask = async () => {
     if (
       !newTask.title.trim() ||
@@ -235,27 +259,27 @@ export default function AdminTasks() {
       newTask.skills.length === 0 ||
       !newTask.deadline
     ) {
-      alert("Please fill all fields.");
+      toast.error("Please fill all fields.");
       return;
     }
 
     if (!currentAdmin) {
-      alert("Admin session missing.");
+      toast.error("Admin session missing.");
       return;
     }
 
     try {
       setBusy(true);
-
-      // 🔹 Try to find a worker to auto-assign
       const { candidates, bestWorker, log, analysis } = findWorkerForTask(newTask, workers, tasks);
 
       const payload: Omit<Task, "id"> = {
         title: newTask.title.trim(),
         description: newTask.description.trim(),
+        projectDetails: newTask.projectDetails.trim() || "",
+        helperEmail: newTask.helperEmail.trim() || "",
         category: newTask.category.trim(),
         skills: newTask.skills,
-        weeklyPayout: Number(newTask.weeklyPayout) || 0, // stored as USD
+        weeklyPayout: Number(newTask.weeklyPayout) || 0,
         deadline: newTask.deadline,
         status: bestWorker ? "in-progress" : "available",
         assignedTo: bestWorker ? bestWorker.id : null,
@@ -265,15 +289,13 @@ export default function AdminTasks() {
         createdBy: currentAdmin.id,
       };
 
-      // Remove undefined values to please Firestore
       const cleanPayload = Object.fromEntries(
         Object.entries(payload).filter(([_, v]) => v !== undefined)
       );
 
-      // 🔹 Save new skills to DB
       const newSkills = newTask.skills.filter(s => !availableSkills.includes(s));
       if (newSkills.length > 0) {
-        newSkills.forEach(s => storage.addSkill(s)); // non-blocking
+        newSkills.forEach(s => storage.addSkill(s));
         setAvailableSkills(prev => [...prev, ...newSkills]);
       }
 
@@ -289,7 +311,7 @@ export default function AdminTasks() {
 
     } catch (err) {
       console.error(err);
-      alert("An error occurred while preparing the task.");
+      toast.error("An error occurred while preparing the task.");
     } finally {
       setBusy(false);
     }
@@ -303,30 +325,50 @@ export default function AdminTasks() {
       const finalPayload = { ...assignmentModal.cleanPayload };
 
       if (action === 'assign') {
-        // Already set up for bestWorker in handleCreateTask logic
-        // Just ensure status is valid
-        if (!finalPayload.assignedTo) {
-          // Fallback if came from a path where bestWorker wasn't set but 'assign' was clicked (unlikely)
-          finalPayload.status = "available";
-        }
+        if (!finalPayload.assignedTo) finalPayload.status = "available";
       } else if (action === 'broadcast') {
-        // Broadcast to all candidates
         finalPayload.status = "available";
         finalPayload.assignedTo = null;
         finalPayload.assignedAt = null;
         finalPayload.candidateWorkerIds = assignmentModal.candidates.map(u => u.id);
       } else {
-        // create-open (Reject Assignment or manual create)
         finalPayload.status = "available";
         finalPayload.assignedTo = null;
         finalPayload.assignedAt = null;
-        finalPayload.candidateWorkerIds = null; // No restriction
+        finalPayload.candidateWorkerIds = null;
       }
 
       // @ts-ignore
-      await storage.createTask(finalPayload);
-
+      const createdTask = await storage.createTask(finalPayload);
       await reloadTasks();
+
+      // Notifications
+      if (action === 'assign' && finalPayload.assignedTo) {
+        await storage.createNotification({
+          userId: finalPayload.assignedTo,
+          title: "New Mission Assigned",
+          message: `You've been selected for "${finalPayload.title}". Check your dashboard to begin.`,
+          type: "success",
+          read: false,
+          createdAt: new Date().toISOString(),
+          link: "/dashboard"
+        }).catch(e => console.error("Notification failed", e));
+      }
+
+      if (action === 'broadcast' && assignmentModal.candidates.length > 0) {
+        // Notify top candidates
+        await Promise.all(assignmentModal.candidates.slice(0, 5).map(u =>
+          storage.createNotification({
+            userId: u.id,
+            title: "New Opportunity",
+            message: `A new ${finalPayload.category} task matches your skills perfectly.`,
+            type: "info",
+            read: false,
+            createdAt: new Date().toISOString(),
+            link: "/dashboard"
+          })
+        )).catch(e => console.error("Broadcast notifications failed", e));
+      }
 
       setNewTask({
         title: "",
@@ -335,33 +377,36 @@ export default function AdminTasks() {
         skills: [],
         weeklyPayout: 0,
         deadline: "",
+        projectDetails: "",
+        helperEmail: "",
       });
       setWeeklyPayoutInput("");
       setShowCreate(false);
       setAssignmentModal({ ...assignmentModal, visible: false });
 
-      alert(action === 'assign' ? "Task created and assigned." :
-        action === 'broadcast' ? `Task created and broadcasted to ${assignmentModal.candidates.length} candidates.` :
-          "Task created (open availability).");
+      if (action === 'broadcast') {
+        const candidateEmails = assignmentModal.candidates.map(u => u.email).filter(Boolean);
+        if (candidateEmails.length > 0) {
+          mailService.sendBroadcastNotification(candidateEmails, assignmentModal.pendingTask.title)
+            .catch(err => console.error("[BroadcastEmails] failed:", err));
+        }
+      }
+
+      toast.success("Task processed successfully.");
     } catch (err) {
-      console.error("Failed to confirm task:", err);
-      alert("Failed to create task");
+      console.error("confirmAssignment error:", err);
+      toast.error("Failed to create task");
     } finally {
       setBusy(false);
     }
   };
 
-  /* -------------------------------------------------------
-   * ASSIGN TASK
-   * ----------------------------------------------------- */
   const handleAssignTask = async (taskId: string, workerId: string) => {
-    if (!workerId) {
-      alert("Select a worker to assign.");
-      return;
-    }
+    if (!workerId) return;
+    performAssign(taskId, workerId);
+  };
 
-    if (!confirm("Assign this task to the selected worker?")) return;
-
+  const performAssign = async (taskId: string, workerId: string) => {
     try {
       setBusy(true);
       await storage.updateTask(taskId, {
@@ -370,130 +415,117 @@ export default function AdminTasks() {
         assignedAt: new Date().toISOString(),
       });
       await reloadTasks();
-      alert("Task assigned.");
+      toast.success("Task assigned.");
     } catch (err) {
       console.error("assignTask error:", err);
-      alert("Failed to assign task.");
+      toast.error("Failed to assign task.");
     } finally {
       setBusy(false);
     }
   };
 
-  /* -------------------------------------------------------
-   * APPROVE TASK (mark completed + payment)
-   * ----------------------------------------------------- */
   const handleApproveTask = async (taskId: string) => {
     const job = tasks.find((t) => t.id === taskId);
-    if (!job) {
-      alert("Task not found.");
-      return;
-    }
-    if (!job.assignedTo) {
-      alert("Task is not assigned to any worker.");
-      return;
-    }
+    if (!job || !job.assignedTo) return;
+    performApprove(job);
+  };
 
-    if (!confirm("Approve this task and release payment?")) return;
-
+  const performApprove = async (job: Task) => {
     try {
       setBusy(true);
-
-      await storage.updateTask(taskId, {
+      await storage.updateTask(job.id, {
         status: "completed",
         completedAt: new Date().toISOString(),
       });
-
-      const payment: Omit<Payment, "id"> = {
-        userId: job.assignedTo,
-        amount: job.weeklyPayout, // base USD
+      await storage.createPayment({
+        userId: job.assignedTo!,
+        amount: job.weeklyPayout,
         type: "task-payment",
         status: "completed",
         taskId: job.id,
         createdAt: new Date().toISOString(),
         completedAt: new Date().toISOString(),
-      };
+      });
+      const worker = await storage.getUserById(job.assignedTo!);
+      if (worker) {
+        await storage.updateUser(worker.id, { balance: (worker.balance || 0) + job.weeklyPayout });
 
-      await storage.createPayment(payment);
-
-      try {
-        const worker = await storage.getUserById(job.assignedTo);
-        if (worker) {
-          const newBalance = (worker.balance || 0) + job.weeklyPayout;
-          await storage.updateUser(worker.id, { balance: newBalance });
-        }
-      } catch (err) {
-        console.warn("Failed to update worker balance:", err);
+        await storage.createNotification({
+          userId: worker.id,
+          title: "Payment Received",
+          message: `Your work on "${job.title}" was approved. ${job.weeklyPayout.toFixed(2)} USD added to balance.`,
+          type: "success",
+          read: false,
+          createdAt: new Date().toISOString(),
+          link: "/payments"
+        }).catch(e => console.error("Notification failed", e));
       }
-
       await reloadTasks();
-      alert("Task approved and payment processed.");
+      toast.success("Approved and paid.");
     } catch (err) {
       console.error("approveTask error:", err);
-      alert("Failed to approve task.");
+      toast.error("Failed to approve.");
     } finally {
       setBusy(false);
     }
   };
 
-  /* -------------------------------------------------------
-   * REJECT TASK
-   * ----------------------------------------------------- */
-  const handleRejectTask = async (taskId: string) => {
-    const feedback = prompt("Enter rejection reason (optional):") || "";
-    if (!feedback && !confirm("No feedback entered. Reject anyway?")) return;
+  const handleRejectTask = (taskId: string) => {
+    setRejectionModal({ visible: true, taskId, reason: "" });
+  };
 
+  const confirmRejectTask = async () => {
+    if (!rejectionModal.taskId) return;
     try {
       setBusy(true);
-      await storage.updateTask(taskId, {
+      await storage.updateTask(rejectionModal.taskId, {
         status: "rejected",
-        feedback: feedback || undefined,
+        feedback: rejectionModal.reason || "",
       });
-      await reloadTasks();
-      alert("Task rejected.");
-    } catch (err) {
-      console.error("rejectTask error:", err);
-      alert("Failed to reject task.");
-    } finally {
-      setBusy(false);
-    }
-  };
 
-  /* -------------------------------------------------------
-   * DELETE TASK
-   * ----------------------------------------------------- */
-  const handleDeleteTask = async (taskId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this task? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setBusy(true);
-      // @ts-ignore allow dynamic method
-      if (typeof (storage as any).deleteTask === "function") {
-        // @ts-ignore
-        await (storage as any).deleteTask(taskId);
-      } else {
-        console.warn("storage.deleteTask is not implemented.");
-        alert("Delete is not supported by storage.");
+      const rejectedTask = tasks.find(t => t.id === rejectionModal.taskId);
+      if (rejectedTask?.assignedTo) {
+        await storage.createNotification({
+          userId: rejectedTask.assignedTo,
+          title: "Task Feedback",
+          message: `Your submission for "${rejectedTask.title}" requires revisions.`,
+          type: "warning",
+          read: false,
+          createdAt: new Date().toISOString(),
+          link: "/dashboard"
+        }).catch(e => console.error("Notification failed", e));
       }
 
       await reloadTasks();
-      alert("Task deleted.");
+      toast.success("Task rejected.");
+      setRejectionModal({ visible: false, taskId: null, reason: "" });
     } catch (err) {
-      console.error("deleteTask error:", err);
-      alert("Failed to delete task.");
+      console.error("rejectTask error:", err);
+      toast.error("Failed to reject.");
     } finally {
       setBusy(false);
     }
   };
 
-  /* -------------------------------------------------------
-   * SKILL TOGGLE (CREATE FORM)
-   * ----------------------------------------------------- */
+  const handleDeleteTask = async (taskId: string) => {
+    performDelete(taskId);
+  };
+
+  const performDelete = async (taskId: string) => {
+    try {
+      setBusy(true);
+      // @ts-ignore
+      await storage.deleteTask(taskId);
+      await reloadTasks();
+      toast.success("Task deleted.");
+    } catch (err) {
+      console.error("deleteTask error:", err);
+      toast.error("Failed to delete.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleSkillToggle = (skill: string) => {
     setNewTask((prev) => {
       if (prev.skills.includes(skill)) {
@@ -503,8 +535,7 @@ export default function AdminTasks() {
     });
   };
 
-  if (pageLoading) return null;
-  if (!currentAdmin) return null;
+  if (pageLoading || !currentAdmin) return null;
 
   return (
     <Layout>
@@ -512,78 +543,59 @@ export default function AdminTasks() {
         <title>Manage Tasks - Cehpoint</title>
       </Head>
 
-      <div className="space-y-6">
-        {/* Header + currency selector */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Manage Tasks</h1>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Display currency:</span>
-            <select
-              value={currency}
-              onChange={(e) =>
-                handleCurrencyChange(e.target.value as Currency)
-              }
-              disabled={updatingCurrency}
-              className="px-3 py-1.5 border rounded-lg text-sm"
-            >
-              <option value="USD">USD ($)</option>
-              <option value="INR">INR (₹)</option>
-            </select>
+      <div className="max-w-[1400px] mx-auto space-y-10 pb-20">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-gray-100">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Manage Tasks</h1>
+            <p className="text-sm text-gray-500">Create, assign, and track project milestones.</p>
           </div>
 
-          <Button onClick={() => setShowCreate((s) => !s)}>
-            <Plus size={18} />
-            <span>{showCreate ? "Close" : "Create Task"}</span>
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-gray-200">
+              <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider pl-3">Currency</span>
+              <select
+                value={currency}
+                onChange={(e) => handleCurrencyChange(e.target.value as Currency)}
+                disabled={updatingCurrency}
+                className="bg-gray-50 px-3 h-8 border border-gray-200 rounded-lg font-bold text-xs uppercase outline-none focus:border-indigo-600 transition-all cursor-pointer"
+              >
+                <option value="USD">USD ($)</option>
+                <option value="INR">INR (₹)</option>
+              </select>
+            </div>
+            <Button onClick={() => setShowCreate((s) => !s)}>
+              <Plus size={18} />
+              <span>{showCreate ? "Close Panel" : "New Task"}</span>
+            </Button>
+          </div>
         </div>
 
-        {/* CREATE TASK FORM */}
         {showCreate && (
-          <Card>
-            <h3 className="text-xl font-semibold mb-4">Create New Task</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Title</label>
-                <input
-                  type="text"
-                  value={newTask.title}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, title: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border rounded-lg"
-                  placeholder="Task title"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={newTask.description}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, description: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border rounded-lg"
-                  rows={3}
-                  placeholder="Task description"
-                />
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
+          <Card className="animate-in fade-in slide-in-from-top-4 duration-300 border border-gray-100 bg-gray-50/50 p-8 rounded-[24px]">
+            <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-gray-900">
+              <Rocket className="text-indigo-600" size={24} />
+              Create New Mission
+            </h3>
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Category
-                  </label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Project Name</label>
+                  <input
+                    type="text"
+                    value={newTask.title}
+                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                    className="w-full h-11 px-4 bg-white border border-gray-200 rounded-xl focus:border-indigo-600 transition-all outline-none font-medium text-sm"
+                    placeholder="e.g. Backend API Development"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Category</label>
                   <select
                     value={newTask.category}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, category: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border rounded-lg"
+                    onChange={(e) => setNewTask({ ...newTask, category: e.target.value })}
+                    className="w-full h-11 px-4 bg-white border border-gray-200 rounded-xl outline-none font-medium text-sm"
                   >
-                    <option value="">Select category</option>
+                    <option value="">Choose category...</option>
                     <option value="Development">Development</option>
                     <option value="Design">Design</option>
                     <option value="Video Editing">Video Editing</option>
@@ -592,481 +604,517 @@ export default function AdminTasks() {
                     <option value="General">General</option>
                   </select>
                 </div>
+              </div>
 
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Briefing / Description</label>
+                <textarea
+                  value={newTask.description}
+                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                  className="w-full p-4 bg-white border border-gray-200 rounded-xl outline-none font-medium text-sm"
+                  rows={4}
+                  placeholder="Outline the core requirements and goals..."
+                />
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Project Link (Notion/Docs)</label>
+                  <input
+                    type="text"
+                    value={newTask.projectDetails}
+                    onChange={(e) => setNewTask({ ...newTask, projectDetails: e.target.value })}
+                    className="w-full h-11 px-4 bg-white border border-gray-200 rounded-xl font-medium text-sm outline-none"
+                    placeholder="https://docs.google.com/..."
+                  />
+                </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Weekly Payout ({currency === "INR" ? "INR" : "USD"})
-                  </label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Deadline</label>
+                  <input
+                    type="date"
+                    value={newTask.deadline}
+                    onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
+                    className="w-full h-11 px-4 bg-white border border-gray-200 rounded-xl font-medium text-sm outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Mentor Email</label>
+                  <input
+                    type="email"
+                    value={newTask.helperEmail}
+                    onChange={(e) => setNewTask({ ...newTask, helperEmail: e.target.value })}
+                    className="w-full h-11 px-4 bg-white border border-gray-200 rounded-xl font-medium text-sm outline-none"
+                    placeholder="mentor@cehpoint.co.in"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Weekly Payout ({currency})</label>
                   <input
                     type="number"
                     value={weeklyPayoutInput}
                     onChange={handleWeeklyPayoutChange}
-                    className="w-full px-4 py-2 border rounded-lg"
-                    placeholder={`Amount in ${currency}`}
+                    className="w-full h-11 px-4 bg-white border border-gray-200 rounded-xl font-bold text-lg text-indigo-600 outline-none"
+                    placeholder="0.00"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Stored internally in USD. Current base value:{" "}
-                    {formatMoney(newTask.weeklyPayout, "USD")} (displayed as{" "}
-                    {formatMoney(newTask.weeklyPayout, currency)}).
-                  </p>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Deadline
-                </label>
-                <input
-                  type="date"
-                  value={newTask.deadline}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, deadline: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border rounded-lg"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Required Skills
-                </label>
-                <div className="grid grid-cols-3 gap-2">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Skill Matrix Selection</label>
+                <div className="flex flex-wrap gap-2">
                   {availableSkills.map((skill) => (
                     <button
                       key={skill}
                       type="button"
                       onClick={() => handleSkillToggle(skill)}
-                      className={`px-3 py-2 rounded-lg border text-sm transition ${newTask.skills.includes(skill)
-                        ? "border-indigo-600 bg-indigo-100 text-indigo-700"
-                        : "border-gray-300 hover:border-gray-400"
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${newTask.skills.includes(skill)
+                        ? "border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-100"
+                        : "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
                         }`}
                     >
                       {skill}
                     </button>
                   ))}
-                </div>
-
-                {/* Custom Skill Input */}
-                <div className="mt-3 flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Add custom skill..."
-                    className="px-3 py-2 border rounded-lg text-sm flex-1"
-                    value={customSkill}
-                    onChange={e => setCustomSkill(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomSkill(); } }}
-                  />
-                  <button
-                    type="button"
-                    onClick={addCustomSkill}
-                    className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900"
-                  >
-                    Add
-                  </button>
-                </div>
-
-                {/* Display Custom/Extra Skills (Not in the *current* list, though we just added them to available, so this might be empty usually unless we want to distinguish 'recently added') */}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {/* Only show skills here if you really want to highlight 'manually typed' that aren't in the button list yet, 
-                        but since we added them to availableSkills dynamically, they might appear above. 
-                        Let's keep this as 'Selected Skills' view or just highlight selection. 
-                        Actually, let's just rely on the toggle buttons above for all skills now. 
-                        But if the list is huge, we might want a 'Selected' view. */}
+                  <div className="flex gap-2 ml-auto">
+                    <input
+                      type="text"
+                      className="px-3 h-8 bg-white border border-gray-200 rounded-lg text-xs font-medium outline-none"
+                      placeholder="Add custom..."
+                      value={customSkill}
+                      onChange={e => setCustomSkill(e.target.value)}
+                    />
+                    <Button onClick={addCustomSkill} className="h-8 px-4 text-[11px]">Add</Button>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex space-x-3">
-                <Button onClick={handleCreateTask} disabled={busy}>
-                  Create Task
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowCreate(false)}
-                  disabled={busy}
-                >
-                  Cancel
-                </Button>
+              <div className="flex gap-3 pt-4 border-t border-gray-200/50">
+                <Button onClick={handleCreateTask} disabled={busy} className="px-8 h-11">Broadcast Project</Button>
+                <Button variant="outline" onClick={() => setShowCreate(false)} disabled={busy} className="h-11">Cancel</Button>
               </div>
             </div>
           </Card>
         )}
 
-        {/* TASK LIST */}
         <div className="grid gap-4">
           {tasks.length === 0 && (
-            <Card>
-              <p className="text-center text-gray-500 py-8">No tasks yet</p>
-            </Card>
+            <div className="text-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
+              <ClipboardList className="mx-auto text-gray-300 mb-4" size={48} />
+              <p className="text-gray-500 font-bold uppercase tracking-widest">No active projection data</p>
+            </div>
           )}
 
           {tasks.map((task) => {
-            const assignedWorker =
-              workers.find((w) => w.id === task.assignedTo) || null;
+            const isExpanded = expandedTasks[task.id] || false;
+            const assignedWorker = workers.find((w) => w.id === task.assignedTo) || null;
 
             return (
-              <Card key={task.id}>
-                <div className="flex justify-between items-start">
-                  {/* LEFT: TASK DETAILS */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-xl font-semibold">{task.title}</h3>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${task.status === "completed"
-                          ? "bg-green-100 text-green-700"
+              <Card key={task.id} className={`overflow-hidden border transition-all duration-300 ${isExpanded ? 'border-indigo-100 shadow-md ring-1 ring-indigo-50' : 'border-gray-100 hover:border-gray-200 shadow-sm'}`}>
+                <div
+                  onClick={() => toggleExpand(task.id)}
+                  className="flex flex-col md:flex-row items-center justify-between gap-6 p-6 cursor-pointer bg-white hover:bg-gray-50/30 transition-colors"
+                >
+                  <div className="flex items-center gap-5 flex-1 min-w-0">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 ${isExpanded ? 'bg-indigo-600 text-white rotate-180 shadow-md' : 'bg-gray-50 text-gray-400 border border-gray-100'}`}>
+                      <ChevronDown size={20} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${task.status === "completed"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-100"
                           : task.status === "in-progress"
-                            ? "bg-orange-100 text-orange-700"
+                            ? "bg-indigo-50 text-indigo-700 border-indigo-100"
                             : task.status === "submitted"
-                              ? "bg-blue-100 text-blue-700"
+                              ? "bg-blue-50 text-blue-700 border-blue-100"
                               : task.status === "rejected"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-gray-100 text-gray-700"
-                          }`}
-                      >
-                        {task.status}
-                      </span>
-                    </div>
-
-                    <p className="text-gray-600 mt-2">{task.description}</p>
-
-                    <div className="grid grid-cols-3 gap-4 mt-3 text-sm">
-                      <div>
-                        <span className="text-gray-500">Category:</span>{" "}
-                        {task.category}
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Payout:</span>{" "}
-                        {formatMoney(task.weeklyPayout, currency)}
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Deadline:</span>{" "}
-                        {task.deadline
-                          ? new Date(task.deadline).toLocaleDateString()
-                          : "-"}
-                      </div>
-                    </div>
-
-                    <div className="mt-3 text-sm">
-                      <span className="text-gray-500">Required skills: </span>
-                      <div className="inline-flex gap-2 flex-wrap ml-1">
-                        {task.skills?.map((s) => (
-                          <span
-                            key={s}
-                            className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded"
-                          >
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="mt-3 text-sm">
-                      <span className="text-gray-500">Assigned to: </span>
-                      {assignedWorker ? (
-                        <span className="font-medium ml-2">
-                          {assignedWorker.fullName} ({assignedWorker.email})
+                                ? "bg-red-50 text-red-700 border-red-100"
+                                : "bg-gray-50 text-gray-500 border-gray-100"
+                          }`}>
+                          {task.status}
                         </span>
-                      ) : (
-                        <span className="italic ml-2 text-gray-500">
-                          Not assigned
-                        </span>
-                      )}
+                        <span className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider">{task.category}</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900 truncate tracking-tight">
+                        {task.title}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-10">
+                    <div className="hidden lg:flex items-center gap-4 border-r border-gray-100 pr-8">
+                      <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-100">
+                        <UserIcon className="text-gray-400" size={16} />
+                      </div>
+                      <div className="text-[11px]">
+                        <p className="text-gray-400 font-bold uppercase tracking-wider mb-0.5">Specialist</p>
+                        <p className="text-gray-900 font-bold whitespace-nowrap leading-none mb-1 text-sm">{assignedWorker ? assignedWorker.fullName : 'Recruiting'}</p>
+                        {assignedWorker && (
+                          <div className="flex flex-col text-[10px] text-gray-400 font-medium tracking-tight">
+                            <span>{assignedWorker.email}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Broadcast Info */}
-                    {task.status === "available" && task.candidateWorkerIds && task.candidateWorkerIds.length > 0 && (
-                      <div className="mt-2 text-sm bg-purple-50 text-purple-700 px-2 py-1 rounded inline-block">
-                        <strong>Broadcasted:</strong> Visible to {task.candidateWorkerIds.length} candidate(s).
+                    <div className="flex items-center gap-4 min-w-[140px]">
+                      <div className="text-amber-500 bg-amber-50 p-2.5 rounded-xl border border-amber-100">
+                        <Calendar size={16} />
                       </div>
-                    )}
+                      <div className="text-[11px]">
+                        <p className="text-gray-400 font-bold uppercase tracking-wider mb-0.5">Deadline</p>
+                        <p className="text-gray-900 font-bold text-[13px]">
+                          {task.deadline ? format(new Date(task.deadline), "MMM dd, yyyy") : 'UNSET'}
+                        </p>
+                      </div>
+                    </div>
 
-                    {/* TASK SUBMISSION (FROM WORKER) */}
-                    {task.submissionUrl && (
-                      <div className="mt-5 border border-indigo-100 rounded-xl overflow-hidden shadow-sm bg-white">
-                        <div className="bg-indigo-50/50 px-4 py-3 border-b border-indigo-100 flex items-center gap-2">
-                          <span className="text-xl">🚀</span>
-                          <span className="text-sm font-semibold text-indigo-900">Worker Submission</span>
-                          {task.submittedAt && (
-                            <span className="text-xs text-indigo-600 ml-auto bg-white px-2 py-1 rounded-md border border-indigo-100 shadow-sm">
-                              {new Date(task.submittedAt).toLocaleString()}
-                            </span>
+                    <div className="flex flex-col items-end pl-8 border-l border-gray-100">
+                      <p className="text-xl font-bold text-gray-900 leading-none mb-1">{formatMoney(task.weeklyPayout, currency)}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Grant</p>
+                    </div>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="p-8 border-t border-gray-100 bg-white animate-in slide-in-from-top-2 duration-300">
+                    <div className="grid md:grid-cols-[1fr_350px] gap-10">
+                      <div className="flex flex-col gap-8">
+                        <section>
+                          <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                            <ClipboardList size={14} className="text-indigo-600" /> PROJECT BRIEF
+                          </h4>
+                          <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                            {task.description}
+                          </div>
+                        </section>
+
+                        <section>
+                          <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">REQUIREMENTS</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {Array.isArray(task.skills) && task.skills.map((s) => (
+                              <span key={s} className="px-3 py-1 bg-white text-indigo-600 text-[10px] font-bold uppercase rounded-lg border border-indigo-100 shadow-sm">
+                                {s}
+                              </span>
+                            ))}
+                          </div>
+                        </section>
+
+                        {task.submissionUrl && (
+                          <section className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <Rocket size={20} className="text-indigo-600" />
+                                <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Submission Review</h4>
+                              </div>
+                              <span className="text-[10px] font-bold text-gray-400 px-3 py-1 bg-white border border-gray-200 rounded-full uppercase">
+                                Received {task.submittedAt && format(new Date(task.submittedAt), "MMM dd • hh:mm a")}
+                              </span>
+                            </div>
+                            <div className="p-6 flex flex-col gap-4">
+                              {task.submissionUrl.split('\n').map((line, i) => {
+                                if (line.startsWith('###')) return null;
+                                const kvMatch = line.match(/^\*\*(.*?):\*\*\s*(.*)$/);
+                                if (kvMatch) {
+                                  let label = kvMatch[1].replace(/🔗|🌐|⏱️|📎|📄/g, '').trim();
+                                  let value = kvMatch[2].trim();
+                                  const isUrl = value.startsWith('http');
+
+                                  return (
+                                    <div key={i} className="flex flex-col lg:flex-row lg:items-center justify-between p-4 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-all group">
+                                      <span className="text-[11px] font-bold text-gray-500 uppercase tracking-tight flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                          {label.includes('Documentation') && <FileText size={14} />}
+                                          {label.includes('File Link') && <Paperclip size={14} />}
+                                          {label.includes('Live Demo') && <Globe size={14} />}
+                                          {label.includes('Time Spent') && <Clock size={14} />}
+                                          {label.includes('Repository') && <LinkIcon size={14} />}
+                                          {(label.includes('Challenges') || label.includes('Blockers')) && <Bug size={14} />}
+                                          {label.includes('Notes') && <ClipboardList size={14} />}
+                                        </div>
+                                        {label}
+                                      </span>
+                                      <div className="mt-3 lg:mt-0">
+                                        {isUrl ? (
+                                          <a href={value} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-all shadow-sm">
+                                            View Resource <ExternalLink size={12} />
+                                          </a>
+                                        ) : (
+                                          <span className="text-sm font-bold text-gray-900">
+                                            {label.toLowerCase().includes('time spent') && value && !isNaN(parseFloat(value)) && !value.toLowerCase().includes('hour')
+                                              ? `${value} Hours`
+                                              : value || <span className="text-gray-400 italic font-normal">N/A</span>}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )
+                                }
+                                if (line.startsWith('**') && !line.includes(':**')) {
+                                  const isChallenges = line.includes('Challenges');
+                                  return (
+                                    <div key={i} className={`mt-8 mb-2 flex items-center gap-3 text-xs font-black uppercase tracking-[0.4em] ${isChallenges ? 'text-rose-400' : 'text-amber-400'}`}>
+                                      <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                                      {line.replace(/\*\*/g, '').trim()}
+                                    </div>
+                                  )
+                                }
+                                if (line.trim()) {
+                                  return <p key={i} className="text-sm text-slate-300 leading-relaxed pl-6 border-l-2 border-white/10 ml-3 py-2 font-medium opacity-80">{line}</p>
+                                }
+                                return null;
+                              })}
+                            </div>
+                          </section>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-8">
+                        <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100 shadow-inner">
+                          <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">PROJECT STEWARD</h4>
+                          {task.status === "available" ? (
+                            <div className="space-y-4">
+                              <select
+                                value={task.assignedTo || ""}
+                                onChange={(e) => handleAssignTask(task.id, e.target.value)}
+                                className="w-full px-5 py-4 bg-white border-2 border-gray-200 rounded-2xl font-black text-sm text-gray-900 focus:ring-8 focus:ring-indigo-50 transition-all outline-none appearance-none cursor-pointer"
+                              >
+                                <option value="">MANUAL OVERRIDE...</option>
+                                {workers.map((w) => <option key={w.id} value={w.id}>{w.fullName}</option>)}
+                              </select>
+                              {task.candidateWorkerIds && task.candidateWorkerIds.length > 0 && (
+                                <div className="p-5 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-100">
+                                  <p className="text-[10px] font-black text-indigo-100 uppercase mb-2 flex items-center gap-2 tracking-widest">
+                                    <Rocket size={14} className="animate-bounce" /> BROADCASTING ACTIVE
+                                  </p>
+                                  <p className="text-sm font-black text-white leading-tight">Syncing with {task.candidateWorkerIds.length} qualified specialists.</p>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-center text-center">
+                              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-black text-3xl shadow-xl ring-8 ring-indigo-50 mb-4">
+                                {assignedWorker?.fullName.charAt(0)}
+                              </div>
+                              <p className="text-xl font-black text-gray-900 tracking-tight">{assignedWorker?.fullName}</p>
+                              <p className="text-xs text-indigo-500 font-bold uppercase tracking-widest mt-1 opacity-60">Verified Specialist</p>
+                              <div className="mt-6 w-full pt-6 border-t border-gray-50 flex justify-between">
+                                <div className="text-left">
+                                  <p className="text-[9px] font-black text-gray-300 uppercase leading-none">Reliability</p>
+                                  <p className="text-sm font-black text-gray-900">98%</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-[9px] font-black text-gray-300 uppercase leading-none">Sync Status</p>
+                                  <p className="text-sm font-black text-green-500">OPTIMAL</p>
+                                </div>
+                              </div>
+                            </div>
                           )}
                         </div>
 
-                        <div className="p-4 bg-slate-50/50 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                          {/* Parse markdown-like syntax for better display */}
-                          {task.submissionUrl.split('\n').map((line, idx) => {
-                            // Check for Bold Headers
-                            if (line.trim().startsWith('###')) {
-                              return <h4 key={idx} className="text-base font-bold text-gray-800 mt-4 mb-2 first:mt-0">{line.replace('###', '').trim()}</h4>;
-                            }
-                            if (line.trim().startsWith('**')) {
-                              // Replace bold syntax **...** with actual bold tags and render links if present
-                              const content = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                        {task.status !== "available" && (
+                          <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+                            <div className="flex justify-between items-end mb-5">
+                              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">PROJECT VELOCITY</span>
+                              <span className="text-3xl font-black text-indigo-600 tracking-tighter leading-none">{task.progress || 0}%</span>
+                            </div>
+                            <div className="w-full h-4 bg-gray-50 rounded-full overflow-hidden shadow-inner p-1">
+                              <div className="bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-400 h-full rounded-full transition-all duration-1000 shadow-lg" style={{ width: `${task.progress || 0}%` }} />
+                            </div>
+                            {task.checklist && task.checklist.length > 0 && (
+                              <div className="mt-8 space-y-3">
+                                {task.checklist.slice(0, 4).map((item, idx) => (
+                                  <div key={idx} className="flex items-start gap-3">
+                                    <div className={`mt-1 w-2 h-2 rounded-full ring-4 ${item.completed ? 'bg-indigo-600 ring-indigo-50' : 'bg-gray-200 ring-gray-50'}`} />
+                                    <span className={`text-[11px] font-bold ${item.completed ? 'text-gray-400 line-through' : 'text-gray-700'} truncate`}>{item.text}</span>
+                                  </div>
+                                ))}
+                                {task.checklist.length > 4 && <p className="text-[10px] font-black text-indigo-300 pl-5 uppercase tracking-widest">+ {task.checklist.length - 4} DATA NODES</p>}
+                              </div>
+                            )}
+                          </div>
+                        )}
 
-                              // Detect and render links inside the line
-                              const parts = content.split(/(https?:\/\/[^\s]+)/g);
-                              return (
-                                <div key={idx} className="mb-1.5 flex flex-wrap gap-1 items-center">
-                                  {parts.map((part, pIdx) => {
-                                    if (part.match(/^https?:\/\//)) {
-                                      return (
-                                        <a
-                                          key={pIdx}
-                                          href={part}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-indigo-600 hover:text-indigo-800 hover:underline font-medium inline-flex items-center gap-0.5"
-                                        >
-                                          {part} ↗
-                                        </a>
-                                      );
-                                    }
-                                    return <span key={pIdx} dangerouslySetInnerHTML={{ __html: part }} />;
-                                  })}
-                                </div>
-                              );
-                            }
-
-                            // Regular text lines
-                            return <p key={idx} className="mb-1 text-gray-600">{line}</p>;
-                          })}
+                        <div className="mt-auto space-y-4">
+                          {task.status === "submitted" && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <Button
+                                onClick={() => handleApproveTask(task.id)}
+                                className="bg-green-600 hover:bg-green-700 shadow-xl shadow-green-100 font-black h-auto py-5 rounded-2xl text-[10px] uppercase tracking-widest"
+                              >
+                                Approve & Pay
+                              </Button>
+                              <Button
+                                variant="danger"
+                                onClick={() => handleRejectTask(task.id)}
+                                className="font-black h-auto py-5 rounded-2xl text-[10px] uppercase tracking-widest"
+                              >
+                                Reject Submission
+                              </Button>
+                            </div>
+                          )}
+                          <Button
+                            variant="outline"
+                            onClick={() => handleDeleteTask(task.id)}
+                            className="w-full border-2 border-red-50 text-red-500 hover:bg-red-50 font-black tracking-widest uppercase text-xs p-5 rounded-2xl transition-all hover:border-red-100"
+                          >
+                            Delete Task
+                          </Button>
                         </div>
                       </div>
-                    )}
-                    {task.feedback && (
-                      <p className="text-xs text-gray-600 mt-2">
-                        Feedback: {task.feedback}
-                      </p>
-                    )}
+                    </div>
                   </div>
-
-                  {/* RIGHT: ACTIONS */}
-                  <div className="flex flex-col space-y-2 min-w-[190px] ml-4">
-                    {task.status === "available" && (
-                      <select
-                        value={task.assignedTo || ""}
-                        onChange={(e) =>
-                          handleAssignTask(task.id, e.target.value)
-                        }
-                        className="px-3 py-2 border rounded-lg"
-                        disabled={busy}
-                      >
-                        <option value="">Select worker to assign</option>
-                        {workers.map((w) => (
-                          <option key={w.id} value={w.id}>
-                            {w.fullName} — {w.email}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-
-                    {task.status === "submitted" && (
-                      <>
-                        <Button
-                          onClick={() => handleApproveTask(task.id)}
-                          disabled={busy}
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          variant="danger"
-                          onClick={() => handleRejectTask(task.id)}
-                          disabled={busy}
-                        >
-                          Reject
-                        </Button>
-                      </>
-                    )}
-
-                    {task.status === "in-progress" && (
-                      <>
-                        <Button
-                          onClick={() => handleApproveTask(task.id)}
-                          disabled={busy}
-                        >
-                          Mark Complete &amp; Pay
-                        </Button>
-                        <Button
-                          variant="danger"
-                          onClick={() => handleRejectTask(task.id)}
-                          disabled={busy}
-                        >
-                          Reject
-                        </Button>
-                      </>
-                    )}
-
-                    <Button
-                      variant="outline"
-                      onClick={() => handleDeleteTask(task.id)}
-                      disabled={busy}
-                    >
-                      Delete Task
-                    </Button>
-                  </div>
-                </div>
+                )}
               </Card>
             );
           })}
         </div>
       </div>
 
-      {/* AUTO-ASSIGNMENT CONFIRMATION MODAL */}
-      {
-        assignmentModal.visible && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-              <div className="p-6 border-b">
-                <h3 className="text-xl font-bold text-gray-900">
-                  {assignmentModal.bestWorker ? "Confirm Auto-Assignment" : "Auto-Assignment Failed"}
-                </h3>
-              </div>
+      {assignmentModal.visible && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-[40px] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in duration-300">
+            <div className="p-10 border-b flex justify-between items-center bg-gray-50/50">
+              <h3 className="text-3xl font-black text-gray-900 tracking-tighter">
+                {assignmentModal.bestWorker ? "Assignment Recommended" : "Manual Review Required"}
+              </h3>
+              <button
+                onClick={() => setAssignmentModal({ ...assignmentModal, visible: false })}
+                className="w-12 h-12 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 hover:shadow-lg transition-all"
+              >✕</button>
+            </div>
 
-              <div className="p-6 overflow-y-auto bg-gray-50 flex-1">
-                {assignmentModal.bestWorker ? (
-                  <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-                    <div className="bg-green-100 p-2 rounded-full">
-                      <span className="text-xl">✨</span>
-                    </div>
-                    <div>
-                      <p className="text-green-800 font-bold text-lg">Best Match Found</p>
-                      <p className="text-green-700">
-                        <strong>{assignmentModal.bestWorker.fullName}</strong> is the best fit for this task.
-                      </p>
-                    </div>
+            <div className="p-10 overflow-y-auto bg-white flex-1 custom-scrollbar">
+              {assignmentModal.bestWorker ? (
+                <div className="mb-10 p-8 bg-gradient-to-br from-indigo-600 to-indigo-700 border border-indigo-500 rounded-[32px] flex items-center gap-6 shadow-2xl shadow-indigo-200">
+                  <div className="w-20 h-20 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-inner">
+                    <span className="text-4xl">✨</span>
                   </div>
-                ) : (
-                  <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-3">
-                    <div className="bg-yellow-100 p-2 rounded-full">
-                      <span className="text-xl">⚠️</span>
-                    </div>
-                    <div>
-                      <p className="text-yellow-800 font-bold text-lg">No Auto-Assignment</p>
-                      <p className="text-yellow-700">No suitable worker found. Task will be created as <strong>Available</strong>.</p>
-                    </div>
+                  <div>
+                    <p className="text-white font-black text-2xl tracking-tight">Best Specialist Found</p>
+                    <p className="text-indigo-100 font-bold text-sm mt-1">
+                      {assignmentModal.bestWorker.fullName} is a perfect match for this project.
+                    </p>
                   </div>
-                )}
+                </div>
+              ) : (
+                <div className="mb-10 p-8 bg-amber-50 border border-amber-100 rounded-[32px] flex items-center gap-6">
+                  <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center border border-amber-100 shadow-md">
+                    <span className="text-4xl text-amber-500">⚠️</span>
+                  </div>
+                  <div>
+                    <p className="text-amber-900 font-black text-2xl tracking-tight">No Automatic Match</p>
+                    <p className="text-amber-700 font-bold text-sm mt-1">Unable to find an ideal specialist for instant assignment.</p>
+                  </div>
+                </div>
+              )}
 
-                {/* RICH ANALYSIS UI */}
-                {assignmentModal.analysis ? (
-                  <div className="space-y-6">
-                    {/* Requirements */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Requirements</h4>
-                      <div className="bg-white p-3 border rounded-lg text-sm text-gray-700 shadow-sm">
-                        {assignmentModal.analysis.requirements}
-                      </div>
+              {assignmentModal.analysis && (
+                <div className="space-y-10">
+                  <section>
+                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-4">Matching Logic Overview</h4>
+                    <div className="bg-gray-50 p-6 rounded-3xl text-sm text-gray-600 font-medium leading-relaxed border border-gray-100">
+                      {assignmentModal.analysis.requirements}
                     </div>
+                  </section>
 
-                    {/* Task Skills */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Required Skills</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {assignmentModal.analysis.taskSkills.length > 0 ? (
-                          assignmentModal.analysis.taskSkills.map(skill => (
-                            <span key={skill} className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-full border border-indigo-100">
-                              {skill}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-gray-400 italic text-sm">No skills specified</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Candidates Table */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Candidate Evaluation</h4>
-                      <div className="bg-white border rounded-lg overflow-hidden shadow-sm">
-                        <table className="w-full text-sm text-left">
-                          <thead className="bg-gray-50 text-gray-500 font-medium border-b">
-                            <tr>
-                              <th className="px-4 py-3">Worker</th>
-                              <th className="px-4 py-3">Skill Match</th>
-                              <th className="px-4 py-3">Active Tasks</th>
-                              <th className="px-4 py-3 text-right">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {assignmentModal.analysis.candidates.map((cand, idx) => (
-                              <tr key={idx} className={cand.workerName === assignmentModal.bestWorker?.fullName ? "bg-green-50/50" : ""}>
-                                <td className="px-4 py-3 font-medium text-gray-900">{cand.workerName}</td>
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                      <div
-                                        className={`h-full ${cand.matchPercentage >= 40 ? 'bg-green-500' : 'bg-gray-400'}`}
-                                        style={{ width: `${cand.matchPercentage}%` }}
-                                      />
-                                    </div>
-                                    <span className="text-xs text-gray-500">
-                                      {cand.matchPercentage.toFixed(0)}% ({cand.matchCount}/{cand.totalRequired})
-                                    </span>
+                  <section>
+                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-4">Qualified Talent Pool</h4>
+                    <div className="bg-white border border-gray-100 rounded-[32px] overflow-hidden shadow-sm">
+                      <table className="w-full text-sm text-left">
+                        <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                          <tr>
+                            <th className="px-8 py-5">Specialist</th>
+                            <th className="px-8 py-5">Skill Match</th>
+                            <th className="px-8 py-5 text-right">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {assignmentModal.analysis.candidates.map((cand, idx) => (
+                            <tr key={idx} className={cand.workerName === assignmentModal.bestWorker?.fullName ? "bg-indigo-50/50" : ""}>
+                              <td className="px-8 py-5 font-black text-gray-900">{cand.workerName}</td>
+                              <td className="px-8 py-5">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-indigo-600 shadow-[0_0_8px_rgba(79,70,229,0.4)]" style={{ width: `${cand.matchPercentage}%` }} />
                                   </div>
-                                </td>
-                                <td className="px-4 py-3 text-gray-600">{cand.activeTasks}</td>
-                                <td className="px-4 py-3 text-right">
-                                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                                                    ${cand.status === 'Eligible' ? 'bg-green-100 text-green-800' :
-                                      cand.status.includes('BUSY') ? 'bg-red-100 text-red-800' :
-                                        'bg-gray-100 text-gray-800'}`}>
-                                    {cand.status}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                            {assignmentModal.analysis.candidates.length === 0 && (
-                              <tr>
-                                <td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">
-                                  No candidates evaluated.
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                                  <span className="text-[11px] font-black text-indigo-600">{cand.matchPercentage.toFixed(0)}%</span>
+                                </div>
+                              </td>
+                              <td className="px-8 py-5 text-right">
+                                <span className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${cand.status === 'Eligible' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-gray-50 text-gray-400'}`}>
+                                  {cand.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                  </div>
-                ) : (
-                  // Fallback to raw log if analysis object is missing
-                  <div className="bg-gray-900 text-gray-200 p-4 rounded-lg font-mono text-sm whitespace-pre-wrap overflow-x-auto">
-                    {assignmentModal.log}
-                  </div>
-                )}
-              </div>
+                  </section>
+                </div>
+              )}
+            </div>
 
-              <div className="p-6 border-t bg-white flex flex-wrap justify-end gap-3">
-                <Button variant="outline" onClick={() => setAssignmentModal({ ...assignmentModal, visible: false })}>
-                  Cancel
-                </Button>
-
+            <div className="p-10 border-t bg-gray-50/50 flex flex-wrap justify-end gap-4">
+              <Button variant="outline" onClick={() => setAssignmentModal({ ...assignmentModal, visible: false })} className="px-8 h-14 rounded-2xl font-black">Cancel</Button>
+              <button
+                onClick={() => confirmAssignment('create-open')}
+                className="px-8 h-14 border border-gray-200 rounded-2xl hover:bg-white transition-all text-gray-500 font-bold text-xs uppercase tracking-widest"
+              >
+                Create as Open
+              </button>
+              {assignmentModal.candidates.length > 0 && (
                 <button
-                  onClick={() => confirmAssignment('create-open')}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 font-medium"
+                  onClick={() => confirmAssignment('broadcast')}
+                  className="px-8 h-14 bg-white text-indigo-600 border-2 border-indigo-600 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-100 transition-all hover:scale-105 active:scale-95"
                 >
-                  Create as Open (Unassigned)
+                  Broadcast to {assignmentModal.candidates.length} Workers
                 </button>
-
-                {assignmentModal.candidates.length > 0 && (
-                  <button
-                    onClick={() => confirmAssignment('broadcast')}
-                    className="px-4 py-2 bg-purple-100 text-purple-700 border border-purple-200 rounded-lg font-medium hover:bg-purple-200"
-                  >
-                    Broadcast to {assignmentModal.candidates.length} Candidates
-                  </button>
-                )}
-
-                {assignmentModal.bestWorker && (
-                  <Button onClick={() => confirmAssignment('assign')} disabled={busy}>
-                    Confirm & Assign to {assignmentModal.bestWorker.fullName}
-                  </Button>
-                )}
-              </div>
+              )}
+              {assignmentModal.bestWorker && (
+                <Button
+                  onClick={() => confirmAssignment('assign')}
+                  disabled={busy}
+                  className="px-10 h-14 bg-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-2xl shadow-indigo-200 hover:bg-indigo-700 hover:scale-105 active:scale-95"
+                >
+                  Confirm Assignment
+                </Button>
+              )}
             </div>
           </div>
-        )
-      }
+        </div>
+      )}
 
-    </Layout >
+      {rejectionModal.visible && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-[40px] shadow-2xl max-w-md w-full animate-in zoom-in duration-300 overflow-hidden border border-red-50">
+            <div className="p-10 border-b bg-red-50/30 flex justify-between items-center">
+              <h3 className="text-2xl font-black text-red-600 tracking-tighter">Review Feedback</h3>
+              <button
+                onClick={() => setRejectionModal({ visible: false, taskId: null, reason: "" })}
+                className="text-gray-400 hover:text-gray-900 transition-all"
+              >✕</button>
+            </div>
+            <div className="p-10 space-y-8">
+              <p className="text-gray-500 text-sm font-bold leading-relaxed">Outline the critical issues preventing project seal. The specialist will receive this feedback immediately via encrypted link.</p>
+              <textarea
+                value={rejectionModal.reason}
+                onChange={(e) => setRejectionModal({ ...rejectionModal, reason: e.target.value })}
+                className="w-full px-6 py-5 bg-gray-50 border border-gray-200 rounded-3xl focus:ring-8 focus:ring-red-50 transition-all outline-none text-sm font-bold"
+                rows={4}
+                placeholder="LOG DIAGNOSTIC..."
+              />
+            </div>
+            <div className="p-10 border-t bg-gray-50/50 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setRejectionModal({ visible: false, taskId: null, reason: "" })} disabled={busy} className="rounded-2xl px-6">CANCEL</Button>
+              <Button variant="danger" onClick={confirmRejectTask} disabled={busy} className="bg-red-600 hover:bg-red-700 font-black text-xs tracking-widest px-8 rounded-2xl shadow-2xl shadow-red-100">DISPATCH REJECTION</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Layout>
   );
 }

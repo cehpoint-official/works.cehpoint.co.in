@@ -72,8 +72,9 @@ export function findWorkerForTask(
         return { candidates: [], bestWorker: null, log, analysis };
     }
 
-    const requiredSkills = newTask.skills.map((s) => s.toLowerCase());
-    log += `- Task Skills: ${newTask.skills.join(", ")}\n`;
+    const rawTaskSkills = Array.isArray(newTask.skills) ? newTask.skills : [];
+    const requiredSkills = rawTaskSkills.map((s) => String(s).toLowerCase());
+    log += `- Task Skills: ${requiredSkills.join(", ")}\n`;
 
     // Helper to count active tasks per worker
     const workerTaskCounts: Record<string, number> = {};
@@ -95,8 +96,9 @@ export function findWorkerForTask(
     // Evaluate all workers
     for (const worker of allWorkers) {
         const currentLoad = workerTaskCounts[worker.id] || 0;
-        const workerSkills = (worker.skills || []).map((s) => s.toLowerCase());
-        const matchingSkills = requiredSkills.filter((req) => workerSkills.includes(req));
+        const rawSkills = Array.isArray(worker.skills) ? worker.skills : [];
+        const workerSkills = rawSkills.map((s) => String(s).toLowerCase());
+        const matchingSkills = requiredSkills.filter((req) => workerSkills.includes(req.toLowerCase()));
         const matchCount = matchingSkills.length;
         const totalRequired = requiredSkills.length;
         const matchPercentage = totalRequired > 0 ? (matchCount / totalRequired) * 100 : 0;

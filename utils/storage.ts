@@ -164,15 +164,16 @@ import {
   updatePayment as fsUpdatePayment,
 
   getSkills as fsGetSkills,
-  addSkill as fsAddSkill
-
-
+  addSkill as fsAddSkill,
+  createNotification as fsCreateNotification,
+  listNotifications as fsListNotifications,
+  markNotificationRead as fsMarkNotificationRead
 } from "./firestore";
 
 import { storage as firebaseStorage } from "./firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-import type { User, Task, DailySubmission, Payment } from "./types";
+import type { User, Task, DailySubmission, Payment, Notification } from "./types";
 
 /**
  * Firestore-backed storage module
@@ -297,6 +298,21 @@ export const storage = {
 
   async addSkill(skill: string): Promise<void> {
     return await fsAddSkill(skill);
+  },
+
+  /* -------------------------
+   * NOTIFICATIONS
+   * ------------------------- */
+  async createNotification(notif: Omit<Notification, "id">): Promise<Notification> {
+    return await fsCreateNotification(notif);
+  },
+
+  async getNotifications(userId: string): Promise<Notification[]> {
+    return await fsListNotifications(userId);
+  },
+
+  async markNotificationRead(id: string): Promise<void> {
+    return await fsMarkNotificationRead(id);
   },
 
   /* -------------------------

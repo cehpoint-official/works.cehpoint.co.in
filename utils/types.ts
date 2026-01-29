@@ -264,12 +264,20 @@ export interface Task {
 
   // 🔹 Workers who passed the filter and can see/accept this task
   candidateWorkerIds?: string[];
+  declinedBy?: string[];
+
+  // 🔹 Progress Tracking
+  progress?: number; // 0-100
+  checklist?: { text: string; completed: boolean }[];
 
   submittedAt?: string;
   submissionUrl?: string;
 
   completedAt?: string;
   feedback?: string;
+
+  projectDetails?: string;
+  helperEmail?: string;
 }
 
 /* ============================
@@ -306,4 +314,18 @@ export interface Payment {
 
   payoutMethod?: "upi" | "bank" | "paypal" | "crypto";
   payoutMethodDetails?: string;
+}
+
+/* ============================
+   NOTIFICATION
+============================ */
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: "info" | "success" | "warning" | "error";
+  read: boolean;
+  createdAt: string;
+  link?: string;
 }

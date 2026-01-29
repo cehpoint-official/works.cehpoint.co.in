@@ -131,6 +131,7 @@
 
 // pages/demo-task.tsx
 import { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { useRouter } from "next/router";
 import Head from "next/head";
 
@@ -196,7 +197,7 @@ export default function DemoTask() {
    * ------------------------------------------------------- */
   const handleSubmit = async () => {
     if (!submission.trim()) {
-      alert("Please enter your submission");
+      toast.error("Please enter your submission details.");
       return;
     }
 
@@ -250,9 +251,32 @@ export default function DemoTask() {
       );
     }
 
-    alert(
-      `Demo task submitted! Score: ${score}/100. You can now accept regular tasks.`
-    );
+    toast((t) => (
+      <div className="flex flex-col gap-3 min-w-[350px] p-2">
+        <div className="flex items-start gap-3">
+          <div className="bg-green-100 p-2 rounded-full text-green-600">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          </div>
+          <div>
+            <h4 className="font-bold text-gray-900 text-xl">Demo Task Complete! 🎉</h4>
+            <p className="text-gray-600 mt-1">
+              You scored <span className="font-bold text-green-600">{score}/100</span>.
+            </p>
+            <p className="text-gray-500 text-sm mt-1">
+              You are now qualified to accept regular paid tasks.
+            </p>
+          </div>
+        </div>
+        <div className="mt-2 flex justify-end">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="text-sm font-medium text-gray-500 hover:text-gray-700"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    ), { duration: 8000, style: { padding: '20px' } });
     router.push("/dashboard");
   };
 
@@ -264,14 +288,14 @@ export default function DemoTask() {
     demoCategory === "developer"
       ? "Developer Demo Task"
       : demoCategory === "video-editor"
-      ? "Video Editor Demo Task"
-      : demoCategory === "designer"
-      ? "Designer Demo Task"
-      : demoCategory === "marketing"
-      ? "Marketing Demo Task"
-      : demoCategory === "writing"
-      ? "Writing Demo Task"
-      : "Demo Task";
+        ? "Video Editor Demo Task"
+        : demoCategory === "designer"
+          ? "Designer Demo Task"
+          : demoCategory === "marketing"
+            ? "Marketing Demo Task"
+            : demoCategory === "writing"
+              ? "Writing Demo Task"
+              : "Demo Task";
 
   const skillsLabel =
     user.skills && user.skills.length > 0
@@ -282,14 +306,14 @@ export default function DemoTask() {
     demoCategory === "developer"
       ? "GitHub repo link, live URL, and a short explanation of your app..."
       : demoCategory === "video-editor"
-      ? "Google Drive / YouTube link and a short note about your edits..."
-      : demoCategory === "designer"
-      ? "Figma / design link and a brief explanation of your design choices..."
-      : demoCategory === "marketing"
-      ? "Link to your document / slides and a brief summary of your campaign..."
-      : demoCategory === "writing"
-      ? "Paste your article or share a doc link, plus a short context..."
-      : "Link to your work and a brief explanation of what you did...";
+        ? "Google Drive / YouTube link and a short note about your edits..."
+        : demoCategory === "designer"
+          ? "Figma / design link and a brief explanation of your design choices..."
+          : demoCategory === "marketing"
+            ? "Link to your document / slides and a brief summary of your campaign..."
+            : demoCategory === "writing"
+              ? "Paste your article or share a doc link, plus a short context..."
+              : "Link to your work and a brief explanation of what you did...";
 
   return (
     <Layout>

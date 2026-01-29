@@ -1,5 +1,6 @@
 // pages/dashboard.tsx
 import { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { useRouter } from "next/router";
 import Head from "next/head";
 
@@ -122,7 +123,7 @@ export default function Dashboard() {
 
         // Check filtering/broadcasting logic
         // 1. If it has candidate restrictions, I MUST be in the list
-        if (t.candidateWorkerIds && t.candidateWorkerIds.length > 0) {
+        if (Array.isArray(t.candidateWorkerIds) && t.candidateWorkerIds.length > 0) {
           return t.candidateWorkerIds.includes(currentUser.id);
         }
 
@@ -164,7 +165,7 @@ export default function Dashboard() {
       setUser(updatedUser);
     } catch (err) {
       console.error("Failed to update currency preference:", err);
-      alert("Failed to update currency preference.");
+      toast.error("Failed to update currency preference.");
     } finally {
       setUpdatingCurrency(false);
     }
@@ -256,10 +257,12 @@ export default function Dashboard() {
       storage.setCurrentUser(updatedUser);
       setUser(updatedUser);
 
-      alert("Profile updated successfully.");
+      setUser(updatedUser);
+
+      toast.success("Profile updated successfully.");
     } catch (err) {
       console.error("Failed to update profile:", err);
-      alert("Failed to update profile.");
+      toast.error("Failed to update profile.");
     } finally {
       setSavingProfile(false);
     }
@@ -273,40 +276,39 @@ export default function Dashboard() {
 
       <div className="space-y-6">
         {/* HEADER + CURRENCY SELECTOR + PROFILE ICON */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-black text-gray-900">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pb-6 border-b border-gray-100">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
               Welcome back, {user.fullName}! 👋
             </h1>
-            <p className="text-gray-600 mt-2 text-base md:text-lg">
-              Here&apos;s an overview of your work progress
+            <p className="text-sm text-gray-500 max-w-lg">
+              Monitor your work progress, manage tasks, and track your earnings.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Display currency:</span>
+          <div className="flex items-center gap-3 bg-white p-1.5 rounded-xl border border-gray-200">
+            <div className="flex items-center gap-2 pl-2">
+              <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Currency</span>
               <select
                 value={currency}
                 onChange={(e) =>
                   handleCurrencyChange(e.target.value as Currency)
                 }
                 disabled={updatingCurrency}
-                className="px-3 py-1.5 border rounded-lg text-sm"
+                className="bg-gray-50 px-3 h-8 border border-gray-200 rounded-lg font-bold text-xs uppercase outline-none focus:border-indigo-600 transition-all cursor-pointer"
               >
                 <option value="USD">USD ($)</option>
                 <option value="INR">INR (₹)</option>
               </select>
             </div>
 
-            {/* Profile icon button */}
             <button
               type="button"
               onClick={() => setShowProfile((v) => !v)}
-              className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-full hover:bg-gray-50 transition text-sm text-gray-700"
+              className="flex items-center gap-2 px-4 h-11 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all"
             >
-              <UserIcon size={18} />
-              <span className="hidden sm:inline">Profile</span>
+              <UserIcon size={16} />
+              <span>{showProfile ? 'Hide Profile' : 'Edit Profile'}</span>
             </button>
           </div>
         </div>
@@ -410,8 +412,8 @@ export default function Dashboard() {
                     type="button"
                     onClick={() => handleSkillToggle(skill)}
                     className={`px-3 py-2 rounded-lg border text-sm transition ${profileForm.skills.includes(skill)
-                        ? "border-indigo-600 bg-indigo-100 text-indigo-700"
-                        : "border-gray-300 hover:border-gray-400"
+                      ? "border-indigo-600 bg-indigo-100 text-indigo-700"
+                      : "border-gray-300 hover:border-gray-400"
                       }`}
                   >
                     {skill}
@@ -429,29 +431,29 @@ export default function Dashboard() {
         )}
 
         {/* TABS */}
-        <div className="flex flex-wrap gap-2 md:gap-4 border-b-2 border-gray-200">
+        <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
           <button
             onClick={() => setActiveTab("overview")}
-            className={`px-4 md:px-6 py-2 md:py-3 font-bold text-sm md:text-lg transition-all ${activeTab === "overview"
-                ? "text-indigo-600 border-b-4 border-indigo-600 -mb-0.5"
-                : "text-gray-600 hover:text-gray-900"
+            className={`px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${activeTab === "overview"
+              ? "bg-white text-indigo-600 shadow-sm"
+              : "text-gray-500 hover:text-gray-700"
               }`}
           >
             <div className="flex items-center gap-2">
-              <Briefcase size={18} className="md:size-5" />
-              <span>Overview</span>
+              <Briefcase size={14} />
+              Overview
             </div>
           </button>
           <button
             onClick={() => setActiveTab("daily-work")}
-            className={`px-4 md:px-6 py-2 md:py-3 font-bold text-sm md:text-lg transition-all ${activeTab === "daily-work"
-                ? "text-indigo-600 border-b-4 border-indigo-600 -mb-0.5"
-                : "text-gray-600 hover:text-gray-900"
+            className={`px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${activeTab === "daily-work"
+              ? "bg-white text-indigo-600 shadow-sm"
+              : "text-gray-500 hover:text-gray-700"
               }`}
           >
             <div className="flex items-center gap-2">
-              <Calendar size={18} className="md:size-5" />
-              <span>Daily Work</span>
+              <Calendar size={14} />
+              Daily Work
             </div>
           </button>
         </div>
@@ -496,22 +498,17 @@ export default function Dashboard() {
               </Card>
             )}
 
-            {/* STATS GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {stats.map((stat, idx) => (
-                <Card key={idx} className="text-center">
-                  <div
-                    className={`w-10 h-10 md:w-12 md:h-12 ${stat.color} rounded-full flex items-center justify-center mx-auto mb-3`}
-                  >
-                    <stat.icon size={20} className="md:size-6" />
+                <div key={idx} className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all group">
+                  <div className="flex justify-between items-start mb-3">
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{stat.label}</p>
+                    <div className={`p-2.5 rounded-xl ${stat.color.replace('text-', 'bg-').replace('600', '50')} ${stat.color} group-hover:scale-110 transition-transform`}>
+                      <stat.icon size={18} />
+                    </div>
                   </div>
-                  <p className="text-xl md:text-2xl font-bold text-gray-900">
-                    {stat.value}
-                  </p>
-                  <p className="text-xs md:text-sm text-gray-600 mt-1">
-                    {stat.label}
-                  </p>
-                </Card>
+                  <p className="text-3xl font-bold text-gray-900 tracking-tight">{stat.value}</p>
+                </div>
               ))}
             </div>
 
@@ -576,7 +573,7 @@ export default function Dashboard() {
                           {task.title}
                         </h3>
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {task.skills.map((skill) => (
+                          {Array.isArray(task.skills) && task.skills.map((skill) => (
                             <span
                               key={skill}
                               className="px-2 py-1 bg-indigo-100 text-indigo-600 text-xs rounded"
