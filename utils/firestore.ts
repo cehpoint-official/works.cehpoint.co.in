@@ -18,6 +18,7 @@ import type { User, Task, DailySubmission } from "./types";
 // Helper to remove any 'undefined' values (Firestore rejects them)
 function cleanObject(obj: any): any {
   if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(cleanObject);
   const cleaned: any = {};
   Object.keys(obj).forEach((key) => {
     if (obj[key] !== undefined) {
@@ -63,8 +64,13 @@ export async function getUserByEmail(email: string) {
 }
 
 export async function listUsers() {
-  const snap = await getDocs(usersCol);
-  return snap.docs.map(d => ({ id: d.id, ...(d.data() as User) })) as User[];
+  try {
+    const snap = await getDocs(usersCol);
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as User) })) as User[];
+  } catch (err) {
+    console.warn("[Firestore] listUsers permission denied or error:", err);
+    return [];
+  }
 }
 
 export async function updateUser(userId: string, payload: Partial<User>) {
@@ -156,14 +162,33 @@ export async function updateSubmission(
   id: string,
   payload: Partial<DailySubmission>
 ): Promise<void> {
-  const cleaned = cleanObject(payload);
-  await updateDoc(doc(db, "submissions", id), cleaned);
+  if (!id) {
+    console.error("updateSubmission: Missing ID");
+    throw new Error("Document ID is required for update");
+  }
+
+  try {
+    const cleaned = cleanObject(payload);
+    const subRef = doc(db, "submissions", id);
+    console.log("📡 Attempting setDoc for submission:", id);
+    // Use setDoc with merge: true as a more robust alternative to updateDoc
+    await setDoc(subRef, cleaned, { merge: true });
+    console.log("✅ Submission updated successfully:", id);
+  } catch (err) {
+    console.error("❌ updateSubmission error for ID:", id, err);
+    throw err;
+  }
 }
 
 
 export async function listSubmissions() {
-  const snap = await getDocs(submissionsCol);
-  return snap.docs.map(d => ({ id: d.id, ...(d.data() as DailySubmission) })) as DailySubmission[];
+  try {
+    const snap = await getDocs(submissionsCol);
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as DailySubmission) })) as DailySubmission[];
+  } catch (err) {
+    console.warn("[Firestore] listSubmissions permission denied or error:", err);
+    return [];
+  }
 }
 
 export async function listSubmissionsByUser(userId: string) {
@@ -203,19 +228,35 @@ import type { Notification } from "./types";
 const notificationsCol = collection(db, "notifications");
 
 export async function createNotification(data: Omit<Notification, "id">) {
-  const cleaned = cleanObject(data);
-  const ref = await addDoc(notificationsCol, cleaned);
-  return { id: ref.id, ...data } as Notification;
+  try {
+    const cleaned = cleanObject(data);
+    const ref = await addDoc(notificationsCol, cleaned);
+    console.log("✅ Notification created:", ref.id);
+    return { id: ref.id, ...data } as Notification;
+  } catch (err) {
+    console.error("❌ createNotification error:", err);
+    // Don't throw here to allow the main process to continue
+    return null;
+  }
 }
 
 export async function listNotifications(userId: string) {
-  const q = query(notificationsCol, where("userId", "==", userId), orderBy("createdAt", "desc"));
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...(d.data() as Notification) })) as Notification[];
+  try {
+    const q = query(notificationsCol, where("userId", "==", userId), orderBy("createdAt", "desc"));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as Notification) })) as Notification[];
+  } catch (err) {
+    console.warn("[Firestore] listNotifications permission denied or index missing:", err);
+    return [];
+  }
 }
 
 export async function markNotificationRead(id: string) {
-  const ref = doc(db, "notifications", id);
-  await updateDoc(ref, { read: true });
+  try {
+    const ref = doc(db, "notifications", id);
+    await updateDoc(ref, { read: true });
+  } catch (err) {
+    console.error("[Firestore] markNotificationRead error:", err);
+  }
 }
 

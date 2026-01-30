@@ -9,6 +9,7 @@ interface UserContextType {
     loading: boolean;
     setCurrency: (currency: Currency) => Promise<void>;
     refreshUser: () => Promise<void>;
+    login: (user: User) => void;
     logout: () => void;
 }
 
@@ -55,13 +56,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const login = (userData: User) => {
+        storage.setCurrentUser(userData);
+        setUser(userData);
+        setCurrencyState(userData.preferredCurrency || 'USD');
+    };
+
     const logout = () => {
         storage.removeCurrentUser();
         setUser(null);
     };
 
     return (
-        <UserContext.Provider value={{ user, currency, loading, setCurrency, refreshUser, logout }}>
+        <UserContext.Provider value={{ user, currency, loading, setCurrency, refreshUser, login, logout }}>
             {children}
         </UserContext.Provider>
     );

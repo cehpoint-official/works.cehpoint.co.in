@@ -44,6 +44,7 @@ export default function AdminDailyWork() {
 
   const [feedbackModal, setFeedbackModal] = useState<{
     submissionId: string;
+    userId: string;
     feedback: string;
     workerName: string;
   } | null>(null);
@@ -118,11 +119,22 @@ export default function AdminDailyWork() {
         adminFeedback: feedbackModal.feedback,
       });
 
+      // Notify worker
+      await storage.createNotification({
+        userId: feedbackModal.userId,
+        title: "Work Status Update",
+        message: `Admin has reviewed and provided feedback for your daily log. Check it out!`,
+        type: "success",
+        read: false,
+        createdAt: new Date().toISOString(),
+      });
+
       toast.success(`Feedback dispatched to ${feedbackModal.workerName}`);
       setFeedbackModal(null);
       await loadData();
-    } catch (err) {
-      toast.error("Failed to transmit feedback.");
+    } catch (err: any) {
+      console.error("Feedback error:", err);
+      toast.error(`Failed to transmit feedback: ${err.message || 'Unknown error'}`);
     } finally {
       setBusy(false);
     }
@@ -418,7 +430,7 @@ export default function AdminDailyWork() {
                               <p className="text-xs text-gray-600 truncate">"{submission.adminFeedback}"</p>
                             </div>
                             <button
-                              onClick={() => setFeedbackModal({ submissionId: submission.id, feedback: submission.adminFeedback || '', workerName: worker?.fullName || 'Specialist' })}
+                              onClick={() => setFeedbackModal({ submissionId: submission.id, userId: submission.userId, feedback: submission.adminFeedback || '', workerName: worker?.fullName || 'Specialist' })}
                               className="p-2 text-gray-400 hover:text-indigo-600 transition-all opacity-0 group-hover/feedback:opacity-100"
                             >
                               <ChevronRight size={16} />
@@ -426,7 +438,7 @@ export default function AdminDailyWork() {
                           </div>
                         ) : (
                           <Button
-                            onClick={() => setFeedbackModal({ submissionId: submission.id, feedback: '', workerName: worker?.fullName || 'Specialist' })}
+                            onClick={() => setFeedbackModal({ submissionId: submission.id, userId: submission.userId, feedback: submission.adminFeedback || '', workerName: worker?.fullName || 'Specialist' })}
                             className="px-8 h-11"
                           >
                             <Send size={16} /> Give Feedback

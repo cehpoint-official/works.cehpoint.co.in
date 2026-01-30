@@ -25,6 +25,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { storage } from "../utils/storage";
 import Button from "../components/Button";
 import { User } from "../utils/types";
+import { useUser } from "../context/UserContext";
 
 /* ================= TYPES & DATA ================= */
 type QuizQuestion = {
@@ -90,6 +91,7 @@ const skillOptions = [
 /* ================= PAGE COMPONENT ================= */
 export default function Signup() {
   const router = useRouter();
+  const { login } = useUser();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -147,6 +149,7 @@ export default function Signup() {
 
     if (authMethod === "google") {
       storage.setCurrentUser(newUser);
+      login(newUser);
       router.push("/dashboard");
     } else {
       toast.success("Account created! Verify your email to continue.");
@@ -397,8 +400,8 @@ export default function Signup() {
                             key={skill}
                             onClick={() => handleSkillToggle(skill)}
                             className={`px-4 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${selectedSkills.includes(skill)
-                                ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20"
-                                : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                              ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20"
+                              : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
                               }`}
                           >
                             {skill}
@@ -466,8 +469,8 @@ export default function Signup() {
                                 setAnswers(na);
                               }}
                               className={`p-4 rounded-xl text-left font-bold transition-all border-2 ${answers[qidx] === oidx
-                                  ? "bg-indigo-50 border-indigo-600 text-indigo-700"
-                                  : "bg-white border-slate-100 text-slate-500 hover:border-slate-200"
+                                ? "bg-indigo-50 border-indigo-600 text-indigo-700"
+                                : "bg-white border-slate-100 text-slate-500 hover:border-slate-200"
                                 }`}
                             >
                               {opt}

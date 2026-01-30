@@ -31,9 +31,11 @@ import {
 } from "firebase/firestore";
 import { storage } from "../utils/storage";
 import { User } from "../utils/types";
+import { useUser } from "../context/UserContext";
 
 export default function Login() {
   const router = useRouter();
+  const { login } = useUser();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -96,6 +98,7 @@ export default function Login() {
       };
 
       storage.setCurrentUser(fullUser);
+      login(fullUser);
       toast.success("Welcome back!");
       router.push(user.role === "admin" ? "/admin" : "/dashboard");
     } catch (err) {
@@ -161,6 +164,7 @@ export default function Login() {
       };
 
       storage.setCurrentUser(fullUser);
+      login(fullUser);
       toast.success("Login Successful");
       router.push(fullUser.role === "admin" ? "/admin" : "/dashboard");
     } catch (err: any) {
