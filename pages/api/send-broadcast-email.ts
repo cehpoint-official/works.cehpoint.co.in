@@ -59,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               </div>
 
               <div style="text-align: center; margin-top: 40px;">
-                <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:5000'}/tasks" 
+                <a href="${(process.env.NEXT_PUBLIC_SITE_URL ? (process.env.NEXT_PUBLIC_SITE_URL.startsWith('http') ? process.env.NEXT_PUBLIC_SITE_URL : `https://${process.env.NEXT_PUBLIC_SITE_URL}`) : 'http://localhost:5000')}/tasks" 
                    style="display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 16px 36px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3); transition: transform 0.2s ease;">
                   Review & Accept Project
                 </a>

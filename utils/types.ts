@@ -163,7 +163,17 @@
 
 
 
-// utils/types.ts
+import { Server as NetServer, Socket } from "net";
+import { Server as SocketIOServer } from "socket.io";
+import { NextApiResponse } from "next";
+
+export type NextApiResponseServerIO = NextApiResponse & {
+  socket: Socket & {
+    server: NetServer & {
+      io: SocketIOServer;
+    };
+  };
+};
 
 export type AccountStatus = "pending" | "active" | "suspended" | "terminated";
 export type UserRole = "worker" | "admin";
@@ -206,7 +216,7 @@ export interface User {
   email: string;
   password: string;
   fullName: string;
-
+  primaryDomain?: string; // e.g. "Full Stack Development"
   phone: string;
   skills: string[];
   experience: string;
@@ -223,6 +233,7 @@ export interface User {
   knowledgeScore: number;
   demoTaskCompleted: boolean;
   demoTaskScore?: number;
+  demoTaskSubmission?: string;
 
   payoutAccount?: PayoutAccount;
 
@@ -232,6 +243,31 @@ export interface User {
   balance: number;
 
   uid?: string;
+}
+
+/* ============================
+   DOMAIN & TECH STACKS
+============================ */
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: number;
+}
+
+export interface DemoTask {
+  title: string;
+  description: string;
+  requirements: string[];
+  deliverable: string;
+}
+
+export interface Domain {
+  id: string;
+  name: string;
+  stacks: string[];
+  questions?: QuizQuestion[];
+  demoTask?: DemoTask;
+  createdAt: string;
 }
 
 /* ============================
@@ -260,6 +296,8 @@ export interface Task {
   createdAt: string;
 
   assignedTo: string | null;
+  assignedWorkerIds?: string[]; // 🔹 For multi-worker support
+  workerPayouts?: Record<string, number>; // 🔹 Individual payouts per worker ID
   assignedAt?: string;
 
   // 🔹 Workers who passed the filter and can see/accept this task
@@ -278,6 +316,7 @@ export interface Task {
 
   projectDetails?: string;
   helperEmail?: string;
+  payoutSchedule?: "weekly" | "one-time";
 }
 
 /* ============================
@@ -328,4 +367,17 @@ export interface Notification {
   read: boolean;
   createdAt: string;
   link?: string;
+}
+
+/* ============================
+   CHAT
+============================ */
+export interface ChatMessage {
+  id: string;
+  taskId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: UserRole;
+  text: string;
+  createdAt: string;
 }

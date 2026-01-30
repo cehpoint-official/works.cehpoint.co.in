@@ -21,7 +21,8 @@ import {
   Banknote,
   AtSign,
   Phone,
-  Ban
+  Ban,
+  Link as LinkIcon
 } from "lucide-react";
 
 const INR_RATE = 89;
@@ -151,7 +152,11 @@ export default function Workers() {
   };
 
   const handleApprove = async (workerId: string) => {
-    await storage.updateUser(workerId, { accountStatus: "active" });
+    await storage.updateUser(workerId, {
+      accountStatus: "active",
+      demoTaskSubmission: "", // 🔹 Clear data to save storage
+      demoTaskScore: 0         // 🔹 Reset score as it's no longer needed
+    });
 
     await storage.createNotification({
       userId: workerId,
@@ -169,6 +174,14 @@ export default function Workers() {
 
   const handleSuspend = async (workerId: string) => {
     await storage.updateUser(workerId, { accountStatus: "suspended" });
+    await storage.createNotification({
+      userId: workerId,
+      title: "Account Suspended",
+      message: "Your account has been temporarily suspended due to a policy review.",
+      type: "warning",
+      read: false,
+      createdAt: new Date().toISOString()
+    }).catch(e => console.error("Notification failed", e));
     await loadWorkers();
     toast.error("Worker has been suspended.");
   };
@@ -176,6 +189,14 @@ export default function Workers() {
   const handleTerminate = async (workerId: string) => {
     if (!confirm("DELETE WORKER: This will permanently remove their account. Continue?")) return;
     await storage.updateUser(workerId, { accountStatus: "terminated" });
+    await storage.createNotification({
+      userId: workerId,
+      title: "Account Terminated",
+      message: "Your access to Cehpoint Work has been permanently revoked.",
+      type: "error",
+      read: false,
+      createdAt: new Date().toISOString()
+    }).catch(e => console.error("Notification failed", e));
     await loadWorkers();
     toast.error("Worker removed from system.");
   };
@@ -389,7 +410,7 @@ export default function Workers() {
                       </div>
                     </div>
 
-                    <div className="grid md:grid-cols-4 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                    <div className="grid md:grid-cols-5 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
                       <div className="space-y-0.5">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Experience</p>
                         <p className="text-sm font-bold text-gray-900">{worker.experience}</p>
@@ -397,6 +418,10 @@ export default function Workers() {
                       <div className="space-y-0.5">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Timezone</p>
                         <p className="text-sm font-bold text-gray-900">{worker.timezone}</p>
+                      </div>
+                      <div className="space-y-0.5 min-w-0">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Assigned Task</p>
+                        <p className="text-sm font-bold text-indigo-600 truncate">{worker.primaryDomain || "Unset"}</p>
                       </div>
                       <div className="space-y-0.5">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Knowledge Score</p>
@@ -407,6 +432,39 @@ export default function Workers() {
                         <p className="text-sm font-bold text-emerald-600">{formatMoney(worker.balance, currency)}</p>
                       </div>
                     </div>
+
+                    {worker.demoTaskSubmission && (
+                      <div className="mt-6 p-4 bg-indigo-50/50 border border-indigo-100/50 rounded-2xl flex items-center justify-between group/demo">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
+                            <LinkIcon size={14} />
+                          </div>
+                          <div className="flex gap-8">
+                            <div>
+                              <p className="text-[10px] font-black text-indigo-900/40 uppercase tracking-widest leading-none mb-1 text-center">Assigned Scope</p>
+                              <span className="text-[11px] font-black text-indigo-900 bg-indigo-100/50 px-2 py-0.5 rounded-md border border-indigo-200 uppercase tracking-tight block text-center">
+                                {worker.primaryDomain || "General Mission"}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black text-indigo-900/40 uppercase tracking-widest leading-none mb-1">Submission Artifact</p>
+                              <a
+                                href={worker.demoTaskSubmission}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 truncate max-w-[250px] block"
+                              >
+                                {worker.demoTaskSubmission}
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-black text-indigo-900/40 uppercase tracking-widest leading-none mb-1">AI Score</p>
+                          <p className="text-sm font-black text-indigo-600">{worker.demoTaskScore}%</p>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="mt-6 flex flex-wrap gap-2">
                       {Array.isArray(worker.skills) && worker.skills.map((s) => (

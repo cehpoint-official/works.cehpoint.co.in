@@ -1,5 +1,7 @@
+// components/DailySubmission.tsx
 import { useState, useEffect } from 'react';
-import { Calendar, Github, Video, Clock, Send } from 'lucide-react';
+import { Calendar, Github, Video, Clock, Send, Info, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { storage } from '../utils/storage';
 import type { DailySubmission, User } from '../utils/types';
@@ -25,10 +27,8 @@ export default function DailySubmissionForm({ userId, onSubmit }: DailySubmissio
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  /* ---------------------------------------
-     Load Current User + Today Submission 
-  ---------------------------------------- */
   useEffect(() => {
     async function load() {
       const userData = await storage.getUserById(userId);
@@ -39,12 +39,15 @@ export default function DailySubmissionForm({ userId, onSubmit }: DailySubmissio
   }, [userId]);
 
   if (loading) {
-    return <p className="text-center py-8">Loading...</p>;
+    return (
+      <div className="flex flex-col items-center justify-center p-20 bg-white border border-slate-100 rounded-[2.5rem]">
+        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Encrypting Workspace...</p>
+      </div>
+    );
   }
 
-  if (!user) {
-    return <p className="text-center py-8 text-red-500">User not found!</p>;
-  }
+  if (!user) return null;
 
   const isDevelopmentWorker = user.skills?.some(skill =>
     ['React', 'Node.js', 'Python', 'Java', 'PHP', 'Angular', 'Vue.js'].includes(skill)
@@ -52,192 +55,190 @@ export default function DailySubmissionForm({ userId, onSubmit }: DailySubmissio
 
   const getTodayDate = () => new Date().toISOString().split('T')[0];
 
-  const hasSubmittedToday = async () => {
-    const submissions = await storage.getSubmissionsByUser(userId);
-    const today = getTodayDate();
-    return submissions.some(s => s.date === today);
-  };
-
-  /* ---------------------------------------
-     Submit Handler
-  ---------------------------------------- */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setIsSubmitting(true);
 
-    const alreadySubmitted = await hasSubmittedToday();
-    if (alreadySubmitted) {
-      setError('You have already submitted your daily work for today!');
-      return;
+    try {
+      const submissions = await storage.getSubmissionsByUser(userId);
+      const today = getTodayDate();
+      if (submissions.some(s => s.date === today)) {
+        setError('Mission log already submitted for today.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (isDevelopmentWorker && !formData.githubCommitUrl) {
+        setError('GitHub commit link is mandatory for software engineers.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!formData.description || formData.hoursWorked <= 0) {
+        setError('Please provide artifacts and time consumption data.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const submission: Omit<DailySubmission, 'id'> = {
+        userId,
+        date: today,
+        githubCommitUrl: formData.githubCommitUrl,
+        videoUrl: formData.videoUrl,
+        description: formData.description,
+        workType: formData.workType,
+        hoursWorked: formData.hoursWorked,
+        createdAt: new Date().toISOString(),
+        adminReviewed: false,
+      };
+
+      await storage.createSubmission(submission);
+
+      setSuccess('Mission Log Synchronized! 🎉');
+      setFormData({
+        githubCommitUrl: '',
+        videoUrl: '',
+        description: '',
+        workType: 'development',
+        hoursWorked: 0,
+      });
+
+      setTimeout(() => onSubmit(), 1500);
+    } catch (err) {
+      setError('System sync failed. Please check your connection.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (isDevelopmentWorker && !formData.githubCommitUrl) {
-      setError('GitHub commit link is mandatory for development workers!');
-      return;
-    }
-
-    if (!formData.description || formData.hoursWorked <= 0) {
-      setError('Please provide work description and hours worked.');
-      return;
-    }
-
-    const submission: Omit<DailySubmission, 'id'> = {
-      userId,
-      date: getTodayDate(),
-      githubCommitUrl: formData.githubCommitUrl,
-      videoUrl: formData.videoUrl,
-      description: formData.description,
-      workType: formData.workType,
-      hoursWorked: formData.hoursWorked,
-      createdAt: new Date().toISOString(),
-      adminReviewed: false,
-    };
-
-    await storage.createSubmission(submission);
-
-    setSuccess('Daily work submitted successfully! 🎉');
-    setFormData({
-      githubCommitUrl: '',
-      videoUrl: '',
-      description: '',
-      workType: 'development',
-      hoursWorked: 0,
-    });
-
-    setTimeout(() => onSubmit(), 1500);
   };
 
   return (
-    <div className="glass-card rounded-3xl premium-shadow p-10 animate-fade-in">
+    <div className="bg-white border border-slate-100 rounded-[2.5rem] p-8 md:p-12 shadow-sm relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32" />
 
-      {/* HEADER */}
-      <div className="mb-8">
-        <h2 className="text-3xl font-black text-gray-900 mb-2">Daily Work Submission</h2>
+      <div className="relative z-10 max-w-2xl mx-auto">
+        {/* HEADER */}
+        <div className="text-center mb-12">
+          <div className="w-16 h-16 bg-slate-900 rounded-3xl flex items-center justify-center text-white mx-auto mb-6 shadow-xl shadow-slate-900/10">
+            <Send size={24} />
+          </div>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-3">Daily Mission Log</h2>
+          <p className="text-slate-500 font-medium">Record your progress to trigger weekly payout calculations.</p>
+        </div>
 
-        {isDevelopmentWorker && (
-          <p className="inline-flex items-center gap-2 bg-red-50 text-red-700 px-3 py-1 rounded-full text-sm font-bold">
-            <Github size={16} /> GitHub commit link is mandatory
-          </p>
-        )}
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <AnimatePresence mode="wait">
+            {error && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-700 text-sm font-bold">
+                <AlertTriangle size={18} /> {error}
+              </motion.div>
+            )}
+            {success && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3 text-emerald-700 text-sm font-bold">
+                <CheckCircle2 size={18} /> {success}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
+                <Calendar size={12} className="text-indigo-600" /> Task Category
+              </label>
+              <select
+                value={formData.workType}
+                onChange={(e) => setFormData({ ...formData, workType: e.target.value as any })}
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 rounded-2xl outline-none transition-all font-bold appearance-none cursor-pointer"
+              >
+                <option value="development">Software Development</option>
+                <option value="design">UI/UX Design</option>
+                <option value="video-editing">Video Production</option>
+                <option value="content">Content Strategy</option>
+                <option value="other">General Operations</option>
+              </select>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
+                <Clock size={12} className="text-indigo-600" /> Time Consumption
+              </label>
+              <input
+                type="number"
+                min="0.5"
+                max="24"
+                step="0.5"
+                placeholder="Hours invested"
+                value={formData.hoursWorked || ''}
+                onChange={(e) => setFormData({ ...formData, hoursWorked: parseFloat(e.target.value) || 0 })}
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 rounded-2xl outline-none transition-all font-bold"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
+              <Github size={12} className="text-indigo-600" /> GitHub Repository Hub
+              {isDevelopmentWorker && <span className="text-rose-500">*</span>}
+            </label>
+            <div className="relative group">
+              <input
+                type="url"
+                value={formData.githubCommitUrl}
+                onChange={(e) => setFormData({ ...formData, githubCommitUrl: e.target.value })}
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 rounded-2xl outline-none transition-all font-bold pl-12"
+                placeholder="https://github.com/..."
+                required={isDevelopmentWorker}
+              />
+              <Github className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
+              <Video size={12} className="text-indigo-600" /> Demonstration Video
+            </label>
+            <div className="relative group">
+              <input
+                type="url"
+                value={formData.videoUrl}
+                onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 rounded-2xl outline-none transition-all font-bold pl-12"
+                placeholder="Loom, YouTube, or Drive link"
+              />
+              <Video className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Daily Synthesis</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-5 py-5 bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 rounded-2xl outline-none transition-all font-bold min-h-[150px] resize-none"
+              placeholder="What did you achieve during this sprint?"
+              required
+            />
+          </div>
+
+          <div className="pt-6">
+            <Button
+              type="submit"
+              className="w-full h-16 rounded-[1.25rem] shadow-2xl shadow-indigo-600/20 text-sm uppercase tracking-[0.2em]"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Synchronizing..." : "Submit Mission Log"} <Send className="ml-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" size={18} />
+            </Button>
+
+            <div className="flex items-center justify-center gap-2 mt-6 py-2">
+              <Info size={14} className="text-slate-400" />
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Submissions are finalized upon entry and trigger audit logs.</p>
+            </div>
+          </div>
+        </form>
       </div>
-
-      {/* FORM */}
-      <form onSubmit={handleSubmit} className="space-y-6">
-
-        {error && (
-          <div className="bg-red-50 border-2 border-red-200 text-red-700 px-5 py-4 rounded-xl font-medium">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="bg-green-50 border-2 border-green-200 text-green-700 px-5 py-4 rounded-xl font-medium">
-            {success}
-          </div>
-        )}
-
-        {/* Work Type */}
-        <div>
-          <label className="block text-sm font-bold mb-3 text-gray-700 flex items-center gap-2">
-            <Calendar size={18} className="text-indigo-600" /> Work Type
-          </label>
-
-          <select
-            value={formData.workType}
-            onChange={(e) =>
-              setFormData({ ...formData, workType: e.target.value as any })
-            }
-            className="w-full px-5 py-4 premium-input rounded-xl text-base font-medium"
-          >
-            <option value="development">Software Development</option>
-            <option value="design">UI/UX Design</option>
-            <option value="video-editing">Video Editing</option>
-            <option value="content">Content Writing</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-
-        {/* GitHub */}
-        <div>
-          <label className="block text-sm font-bold mb-3 text-gray-700 flex items-center gap-2">
-            <Github size={18} className="text-indigo-600" />
-            GitHub Commit URL {isDevelopmentWorker && <span className="text-red-600">*</span>}
-          </label>
-
-          <input
-            type="url"
-            value={formData.githubCommitUrl}
-            onChange={(e) =>
-              setFormData({ ...formData, githubCommitUrl: e.target.value })
-            }
-            className="w-full px-5 py-4 premium-input rounded-xl text-base font-medium"
-            placeholder="https://github.com/username/repo/commit/..."
-            required={isDevelopmentWorker}
-          />
-        </div>
-
-        {/* Video */}
-        <div>
-          <label className="block text-sm font-bold mb-3 text-gray-700 flex items-center gap-2">
-            <Video size={18} className="text-indigo-600" /> Video URL (optional)
-          </label>
-
-          <input
-            type="url"
-            value={formData.videoUrl}
-            onChange={(e) =>
-              setFormData({ ...formData, videoUrl: e.target.value })
-            }
-            className="w-full px-5 py-4 premium-input rounded-xl text-base font-medium"
-            placeholder="https://youtube.com/..."
-          />
-        </div>
-
-        {/* Description */}
-        <div>
-          <label className="block text-sm font-bold mb-3 text-gray-700">
-            Work Description
-          </label>
-          <textarea
-            value={formData.description}
-            onChange={(e) =>
-              setFormData({ ...formData, description: e.target.value })
-            }
-            className="w-full px-5 py-4 premium-input rounded-xl text-base font-medium"
-            rows={4}
-            required
-          />
-        </div>
-
-        {/* Hours */}
-        <div>
-          <label className="block text-sm font-bold mb-3 text-gray-700 flex items-center gap-2">
-            <Clock size={18} className="text-indigo-600" /> Hours Worked
-          </label>
-
-          <input
-            type="number"
-            min="0.5"
-            max="24"
-            step="0.5"
-            value={formData.hoursWorked || ''}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                hoursWorked: parseFloat(e.target.value) || 0,
-              })
-            }
-            className="w-full px-5 py-4 premium-input rounded-xl text-base font-medium"
-            required
-          />
-        </div>
-
-        <Button type="submit" fullWidth>
-          <Send size={20} />
-          Submit Daily Work
-        </Button>
-      </form>
     </div>
   );
 }

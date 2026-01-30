@@ -149,6 +149,7 @@ import {
 
   createTask as fsCreateTask,
   listTasks as fsListTasks,
+  getTaskById as fsGetTaskById,
   updateTask as fsUpdateTask,
 
   createSubmission as fsCreateSubmission,
@@ -167,13 +168,19 @@ import {
   addSkill as fsAddSkill,
   createNotification as fsCreateNotification,
   listNotifications as fsListNotifications,
-  markNotificationRead as fsMarkNotificationRead
+  markNotificationRead as fsMarkNotificationRead,
+  listDomains as fsListDomains,
+  createDomain as fsCreateDomain,
+  updateDomain as fsUpdateDomain,
+  deleteDomain as fsDeleteDomain,
+  saveChatMessage as fsSaveChatMessage,
+  getChatMessages as fsGetChatMessages
 } from "./firestore";
 
 import { storage as firebaseStorage } from "./firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-import type { User, Task, DailySubmission, Payment, Notification } from "./types";
+import type { User, Task, DailySubmission, Payment, Notification, Domain, ChatMessage } from "./types";
 
 /**
  * Firestore-backed storage module
@@ -262,6 +269,10 @@ export const storage = {
     return await fsCreateTask(task);
   },
 
+  async getTaskById(id: string): Promise<Task | null> {
+    return await fsGetTaskById(id);
+  },
+
   async updateTask(id: string, payload: Partial<Task>): Promise<Task | null> {
     return await fsUpdateTask(id, payload);
   },
@@ -340,6 +351,36 @@ export const storage = {
       console.error("[Storage] Error uploading file:", error);
       throw error;
     }
+  },
+
+  /* -------------------------
+   * DOMAINS
+   * ------------------------- */
+  async getDomains(): Promise<Domain[]> {
+    return await fsListDomains();
+  },
+
+  async createDomain(domain: Omit<Domain, "id">): Promise<Domain> {
+    return await fsCreateDomain(domain);
+  },
+
+  async updateDomain(id: string, payload: Partial<Domain>): Promise<void> {
+    return await fsUpdateDomain(id, payload);
+  },
+
+  async deleteDomain(id: string): Promise<void> {
+    return await fsDeleteDomain(id);
+  },
+
+  /* -------------------------
+   * CHAT
+   * ------------------------- */
+  async saveChatMessage(msg: Omit<ChatMessage, "id">): Promise<ChatMessage> {
+    return await fsSaveChatMessage(msg);
+  },
+
+  async getChatMessages(taskId: string): Promise<ChatMessage[]> {
+    return await fsGetChatMessages(taskId);
   },
 };
 

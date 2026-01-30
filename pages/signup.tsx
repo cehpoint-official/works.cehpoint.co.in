@@ -15,7 +15,8 @@ import {
   Brain,
   Zap,
   Eye,
-  EyeOff
+  EyeOff,
+  Layers
 } from "lucide-react";
 
 import { googleAuth } from "../utils/authProviders";
@@ -24,8 +25,9 @@ import { db } from "../utils/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { storage } from "../utils/storage";
 import Button from "../components/Button";
-import { User } from "../utils/types";
+import { User, Domain } from "../utils/types";
 import { useUser } from "../context/UserContext";
+import { useEffect } from "react";
 
 /* ================= TYPES & DATA ================= */
 type QuizQuestion = {
@@ -59,16 +61,22 @@ const QUESTION_SETS: Record<string, QuizQuestion[]> = {
   ],
 };
 
-function getQuestionsForSkills(skills: string[]): QuizQuestion[] {
-  const devSkills = ["React", "Node.js", "Python", "Java", "PHP", "Angular", "Vue.js"];
-  const designSkills = ["UI/UX Design", "Graphic Design", "Adobe Premiere", "After Effects", "Video Editing"];
-  const contentSkills = ["Content Writing"];
-  const marketingSkills = ["Digital Marketing", "SEO"];
+function getQuestionsForSkills(skills: string[], domainName?: string): QuizQuestion[] {
+  const name = domainName?.toLowerCase() || "";
 
-  if (skills.some((s) => devSkills.includes(s))) return QUESTION_SETS.dev;
-  if (skills.some((s) => designSkills.includes(s))) return QUESTION_SETS.design;
-  if (skills.some((s) => contentSkills.includes(s))) return QUESTION_SETS.content;
-  if (skills.some((s) => marketingSkills.includes(s))) return QUESTION_SETS.marketing;
+  if (name.includes("development") || name.includes("frontend") || name.includes("backend") || name.includes("devops") || name.includes("cloud") || name.includes("stack")) {
+    return QUESTION_SETS.dev;
+  }
+  if (name.includes("design") || name.includes("graphics") || name.includes("video") || name.includes("ui") || name.includes("ux")) {
+    return QUESTION_SETS.design;
+  }
+  if (name.includes("content") || name.includes("writing") || name.includes("copy")) {
+    return QUESTION_SETS.content;
+  }
+  if (name.includes("marketing") || name.includes("seo") || name.includes("ads") || name.includes("marketer")) {
+    return QUESTION_SETS.marketing;
+  }
+
   return QUESTION_SETS.general;
 }
 
@@ -78,6 +86,63 @@ const TIMEZONE_OPTIONS = [
   { label: "US Pacific (PT)", value: "America/Los_Angeles" },
   { label: "US Eastern (ET)", value: "America/New_York" },
   { label: "Europe (CET)", value: "Europe/Berlin" },
+];
+
+export const DEFAULT_DOMAINS: Domain[] = [
+  {
+    id: 'd1', name: "Full Stack Development", stacks: ["React", "Node.js", "Next.js", "MongoDB", "PostgreSQL", "TypeScript"], createdAt: "",
+    demoTask: {
+      title: "Core Architecture Assessment",
+      description: "Engineer a mini CRUD application (Todo list, Memo hub, or Task engine) using React/Next.js.",
+      requirements: ["Component architecture", "Lifecycle management", "Form validation & states"],
+      deliverable: "GitHub Repo + Live Deployment URL"
+    }
+  },
+  {
+    id: 'd2', name: "Frontend Development", stacks: ["React", "Vue.js", "Angular", "Tailwind CSS", "Redux", "Framer Motion"], createdAt: "",
+    demoTask: {
+      title: "UI Implementation Challenge",
+      description: "Build a high-fidelity, responsive landing page section based on modern design principles.",
+      requirements: ["Responsive design", "Aesthetic layout", "Clean component structure"],
+      deliverable: "GitHub Repo + Live Preview"
+    }
+  },
+  {
+    id: 'd3', name: "Backend Development", stacks: ["Node.js", "Python", "Go", "Java", "Django", "FastAPI"], createdAt: "",
+    demoTask: {
+      title: "API Performance Sync",
+      description: "Develop a secure RESTful API with authentication and database integration.",
+      requirements: ["Auth implementation", "Database schema", "Error handling"],
+      deliverable: "Source Code + API Documentation"
+    }
+  },
+  {
+    id: 'd4', name: "DevOps & Cloud", stacks: ["Docker", "Kubernetes", "AWS", "Azure", "GitHub Actions"], createdAt: "",
+    demoTask: {
+      title: "Infrastructure Deployment",
+      description: "Create a CI/CD pipeline and containerize a sample application for production.",
+      requirements: ["Dockerization", "Pipeline automation", "Security best practices"],
+      deliverable: "GitHub Repo + Deployment Logs"
+    }
+  },
+  {
+    id: 'd5', name: "Graphics & Design", stacks: ["Photoshop", "Illustrator", "Figma", "UI/UX Design", "After Effects"], createdAt: "",
+    demoTask: {
+      title: "Interface Synthesis",
+      description: "Design a high-fidelity landing page mockup focusing on visual hierarchy.",
+      requirements: ["Design tokens usage", "Responsive layouts", "UX ergonomics"],
+      deliverable: "Figma File (Public Access)"
+    }
+  },
+  {
+    id: 'd6', name: "Marketing & SEO", stacks: ["Google Ads", "SEO", "Content Strategy", "Social Media"], createdAt: "",
+    demoTask: {
+      title: "Growth Strategy Sync",
+      description: "Formulate a multi-channel acquisition strategy for a modern SaaS product.",
+      requirements: ["Channel prioritization", "Ad-copy variation", "Funnel mapping"],
+      deliverable: "Notion or PDF Brief Link"
+    }
+  }
 ];
 
 const CURRENCY_OPTIONS: Array<"INR" | "USD"> = ["INR", "USD"];
@@ -101,6 +166,7 @@ export default function Signup() {
     password: "",
     fullName: "",
     phone: "",
+    primaryDomain: "",
     skills: [] as string[],
     experience: "",
     timezone: "Asia/Kolkata",
@@ -114,6 +180,25 @@ export default function Signup() {
   const [authMethod, setAuthMethod] = useState<"email" | "google" | null>(null);
   const [authUid, setAuthUid] = useState<string | null>(null);
   const [authEmailVerified, setAuthEmailVerified] = useState<boolean>(false);
+
+  const [domains, setDomains] = useState<Domain[]>([]);
+  const [selectedDomain, setSelectedDomain] = useState<Domain | null>(null);
+
+  useEffect(() => {
+    storage.getDomains().then(data => {
+      if (data && data.length > 0) {
+        setDomains(data);
+      } else {
+        setDomains(DEFAULT_DOMAINS);
+      }
+    });
+  }, []);
+
+  const handleDomainSelect = (domain: Domain) => {
+    setSelectedDomain(domain);
+    setSelectedSkills([]); // Reset skills when domain changes
+    setFormData(prev => ({ ...prev, primaryDomain: domain.name }));
+  };
 
   const handleSkillToggle = (skill: string) => {
     if (selectedSkills.includes(skill)) {
@@ -130,6 +215,7 @@ export default function Signup() {
       email: formData.email,
       password: authMethod === "email" ? formData.password : "",
       fullName: formData.fullName,
+      primaryDomain: selectedDomain?.name || "",
       phone: formData.phone,
       skills: selectedSkills,
       experience: formData.experience,
@@ -194,7 +280,12 @@ export default function Signup() {
         return;
       }
       setLoading(true);
-      const qs = getQuestionsForSkills(selectedSkills);
+
+      // SYNC: Use admin-configured questions if available, otherwise fallback to generator
+      let qs = selectedDomain?.questions && selectedDomain.questions.length > 0
+        ? selectedDomain.questions
+        : getQuestionsForSkills(selectedSkills, selectedDomain?.name);
+
       setKnowledgeQuestions(qs);
       setAnswers(new Array(qs.length).fill(-1));
       setStep(3);
@@ -392,22 +483,53 @@ export default function Signup() {
                   </div>
 
                   <div className="space-y-6">
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">Primary Skills (Select Multiple)</label>
-                      <div className="flex flex-wrap gap-2">
-                        {skillOptions.map(skill => (
-                          <button
-                            key={skill}
-                            onClick={() => handleSkillToggle(skill)}
-                            className={`px-4 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${selectedSkills.includes(skill)
-                              ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20"
-                              : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                              }`}
-                          >
-                            {skill}
-                          </button>
-                        ))}
+                    <div className="space-y-8">
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 text-indigo-600">Step A: Choose Main Domain</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {domains.map(domain => (
+                            <button
+                              key={domain.id}
+                              onClick={() => handleDomainSelect(domain)}
+                              className={`p-4 rounded-2xl border-2 text-xs font-black uppercase tracking-tight transition-all text-center flex flex-col items-center gap-3 ${selectedDomain?.id === domain.id
+                                ? "bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-600/20"
+                                : "bg-white border-slate-100 text-slate-500 hover:border-slate-200"
+                                }`}
+                            >
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${selectedDomain?.id === domain.id ? 'bg-white/20' : 'bg-slate-50'}`}>
+                                <Layers size={18} />
+                              </div>
+                              {domain.name}
+                            </button>
+                          ))}
+                        </div>
                       </div>
+
+                      <AnimatePresence mode="wait">
+                        {selectedDomain && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="space-y-4"
+                          >
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 text-emerald-600">Step B: Specialized Stacks in {selectedDomain.name}</label>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedDomain.stacks.map(skill => (
+                                <button
+                                  key={skill}
+                                  onClick={() => handleSkillToggle(skill)}
+                                  className={`px-5 py-3 rounded-xl border-2 text-sm font-bold transition-all ${selectedSkills.includes(skill)
+                                    ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                                    : "bg-white border-slate-100 text-slate-600 hover:border-slate-200"
+                                    }`}
+                                >
+                                  {skill}
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
 
                     <div className="grid grid-cols-2 gap-5">

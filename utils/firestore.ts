@@ -13,7 +13,7 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
-import type { User, Task, DailySubmission } from "./types";
+import type { User, Task, DailySubmission, Domain } from "./types";
 
 // Helper to remove any 'undefined' values (Firestore rejects them)
 function cleanObject(obj: any): any {
@@ -223,6 +223,42 @@ export async function addSkill(skill: string) {
   }
 }
 
+// ----------------- DOMAINS -----------------
+const domainsCol = collection(db, "domains");
+
+export async function listDomains(): Promise<Domain[]> {
+  try {
+    const snap = await getDocs(query(domainsCol, orderBy("createdAt", "asc")));
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as Domain) })) as Domain[];
+  } catch (err) {
+    console.warn("Failed to fetch domains", err);
+    return [];
+  }
+}
+
+export async function createDomain(data: Omit<Domain, "id">): Promise<Domain> {
+  try {
+    console.log("📡 Firestore: Creating domain:", data.name);
+    const cleaned = cleanObject(data);
+    const ref = await addDoc(domainsCol, cleaned);
+    console.log("✅ Firestore: Domain created with ID:", ref.id);
+    return { id: ref.id, ...data } as Domain;
+  } catch (err) {
+    console.error("❌ Firestore: createDomain error:", err);
+    throw err;
+  }
+}
+
+export async function updateDomain(id: string, payload: Partial<Domain>): Promise<void> {
+  const ref = doc(db, "domains", id);
+  const cleaned = cleanObject(payload);
+  await updateDoc(ref, cleaned);
+}
+
+export async function deleteDomain(id: string): Promise<void> {
+  await deleteDoc(doc(db, "domains", id));
+}
+
 // ----------------- NOTIFICATIONS -----------------
 import type { Notification } from "./types";
 const notificationsCol = collection(db, "notifications");
@@ -257,6 +293,31 @@ export async function markNotificationRead(id: string) {
     await updateDoc(ref, { read: true });
   } catch (err) {
     console.error("[Firestore] markNotificationRead error:", err);
+  }
+}
+
+// ----------------- CHAT -----------------
+import type { ChatMessage } from "./types";
+const chatCol = collection(db, "chatMessages");
+
+export async function saveChatMessage(data: Omit<ChatMessage, "id">) {
+  const cleaned = cleanObject(data);
+  const ref = await addDoc(chatCol, cleaned);
+  return { id: ref.id, ...data } as ChatMessage;
+}
+
+export async function getChatMessages(taskId: string) {
+  try {
+    const q = query(chatCol, where("taskId", "==", taskId), orderBy("createdAt", "asc"));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as ChatMessage) })) as ChatMessage[];
+  } catch (err) {
+    console.warn("[Firestore] getChatMessages index missing or error:", err);
+    // Fallback if sorting fails due to missing index
+    const q = query(chatCol, where("taskId", "==", taskId));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as ChatMessage) }))
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) as ChatMessage[];
   }
 }
 
