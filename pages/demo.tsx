@@ -281,7 +281,19 @@ export default function EnhancedExperience() {
     const [isDesktop, setIsDesktop] = useState(true);
 
     useEffect(() => {
-        setIsMounted(true);
+        // 🔹 System Reset: Force viewport to origin with micro-task delay
+        if (typeof window !== "undefined") {
+            if ("scrollRestoration" in window.history) {
+                window.history.scrollRestoration = "manual";
+            }
+
+            // Wait for next frame to ensure browser restoration is overridden
+            requestAnimationFrame(() => {
+                window.scrollTo(0, 0);
+                setIsMounted(true);
+            });
+        }
+
         const checkScreen = () => setIsDesktop(window.innerWidth >= 1024);
         checkScreen();
         window.addEventListener('resize', checkScreen);

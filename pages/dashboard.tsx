@@ -26,6 +26,8 @@ import {
   TrendingUp,
   Award,
   Zap,
+  ShieldCheck,
+  Phone,
 } from "lucide-react";
 
 const INR_RATE = 89;
@@ -93,10 +95,28 @@ export default function Dashboard() {
 
   const loadData = async (currentUser: User) => {
     const tasks = await storage.getTasks();
-    setMyTasks(tasks.filter((t) => t.assignedTo === currentUser.id));
-    setAvailableTasks(tasks.filter((t) => t.status === "available"));
+    const userId = currentUser.id;
 
-    const subs = await storage.getSubmissionsByUser(currentUser.id);
+    // Filter my active/assigned tasks
+    setMyTasks(tasks.filter((t) =>
+      t.assignedTo === userId ||
+      t.assignedWorkerIds?.includes(userId)
+    ));
+
+    // Filter available opportunities
+    setAvailableTasks(tasks.filter((t) => {
+      if (t.status !== "available") return false;
+      if (t.declinedBy?.includes(userId)) return false;
+
+      // If no specific candidates targeted, it's open
+      if (!Array.isArray(t.candidateWorkerIds) || t.candidateWorkerIds.length === 0) return true;
+      // Or if I'm invited
+      if (t.candidateWorkerIds.includes(userId)) return true;
+
+      return false;
+    }));
+
+    const subs = await storage.getSubmissionsByUser(userId);
     setMySubmissions(subs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   };
 
@@ -127,8 +147,22 @@ export default function Dashboard() {
   ];
 
   const handleAcceptTask = async (taskId: string) => {
-    await storage.updateTask(taskId, { status: "in-progress", assignedTo: user!.id });
-    router.push("/tasks");
+    if (!user) return;
+    try {
+      const task = (await storage.getTasks()).find(t => t.id === taskId);
+      if (!task) return;
+
+      await storage.updateTask(taskId, {
+        status: "in-progress",
+        assignedTo: task.assignedTo || user.id,
+        assignedWorkerIds: task.assignedWorkerIds?.length ? task.assignedWorkerIds : [user.id],
+        assignedAt: task.assignedAt || new Date().toISOString()
+      });
+      toast.success("Mission Accepted!");
+      router.push("/tasks");
+    } catch (err) {
+      toast.error("Failed to accept mission.");
+    }
   };
 
   const handleProfileFieldChange = (field: keyof ProfileForm, value: string) => {
@@ -197,27 +231,35 @@ export default function Dashboard() {
             </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-              <div className="flex items-center gap-3 bg-white/5 border border-white/10 p-2 rounded-2xl backdrop-blur-xl">
-                <div className="px-4 py-2">
-                  <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Currency</span>
+              <div className="flex items-center gap-3 bg-white/5 border border-white/10 p-2 rounded-2xl backdrop-blur-xl group hover:border-white/20 transition-all">
+                <div className="px-4 py-2 border-r border-white/10">
+                  <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Node Currency</span>
                   <select
                     value={currency}
                     onChange={(e) => handleCurrencyChange(e.target.value as Currency)}
                     disabled={updatingCurrency}
-                    className="bg-transparent text-lg font-bold outline-none cursor-pointer"
+                    className="bg-transparent text-lg font-black outline-none cursor-pointer text-white"
                   >
                     <option className="text-slate-900" value="USD">USD ($)</option>
                     <option className="text-slate-900" value="INR">INR (₹)</option>
                   </select>
                 </div>
+                <div className="px-4 py-1 pr-6 hidden md:block">
+                  <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Specialist Tier</span>
+                  <span className="text-indigo-400 font-black text-sm uppercase tracking-tight">Verified</span>
+                </div>
               </div>
 
               <button
                 onClick={() => setShowProfile(!showProfile)}
-                className="h-16 px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-700 font-bold text-sm uppercase tracking-widest shadow-xl shadow-indigo-600/20 transition-all active:scale-95 flex items-center justify-center gap-3"
+                className="h-16 px-8 rounded-2xl bg-white text-slate-900 hover:bg-indigo-50 font-black text-sm uppercase tracking-widest shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 group relative overflow-hidden"
               >
-                <UserIcon size={18} />
-                <span>Account Profile</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/0 via-indigo-600/5 to-indigo-600/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                  <UserIcon size={16} />
+                </div>
+                <span>{showProfile ? 'Hide Profile' : 'Account Profile'}</span>
+                <ChevronRight size={16} className={`text-slate-400 transition-transform duration-300 ${showProfile ? 'rotate-90' : ''}`} />
               </button>
             </div>
           </div>
@@ -227,60 +269,140 @@ export default function Dashboard() {
         <AnimatePresence>
           {showProfile && profileForm && (
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              className="relative z-50 mb-12"
             >
-              <Card className="border-indigo-100 bg-indigo-50/30">
-                <div className="flex justify-between items-center mb-8 pb-4 border-b border-indigo-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white">
-                      <Award size={20} />
+              <div className="absolute inset-0 bg-indigo-600/5 blur-[100px] rounded-full" />
+              <Card className="relative overflow-hidden border-indigo-100/50 bg-white/80 backdrop-blur-xl shadow-2xl p-0">
+                <div className="grid lg:grid-cols-[380px_1fr] divide-x divide-slate-100">
+                  {/* Sidebar - Visual Identity */}
+                  <div className="bg-slate-50/50 p-10 flex flex-col items-center text-center space-y-6">
+                    <div className="relative">
+                      <div className="w-32 h-32 rounded-[2.5rem] bg-indigo-600 flex items-center justify-center text-white text-5xl font-black shadow-2xl shadow-indigo-600/20">
+                        {user.fullName.charAt(0)}
+                      </div>
+                      <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-emerald-500 border-4 border-white rounded-full flex items-center justify-center text-white shadow-lg">
+                        <ShieldCheck size={20} />
+                      </div>
                     </div>
-                    <h2 className="text-2xl font-black text-slate-900">Professional Identity</h2>
-                  </div>
-                  <button onClick={() => setShowProfile(false)} className="text-slate-400 hover:text-slate-600">
-                    <Clock className="rotate-45" size={24} />
-                  </button>
-                </div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Full Name</label>
-                    <input type="text" value={profileForm.fullName} onChange={(e) => handleProfileFieldChange("fullName", e.target.value)} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-600 outline-none transition-all font-medium" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Phone</label>
-                    <input type="text" value={profileForm.phone} onChange={(e) => handleProfileFieldChange("phone", e.target.value)} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-600 outline-none transition-all font-medium" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Experience</label>
-                    <input type="text" value={profileForm.experience} onChange={(e) => handleProfileFieldChange("experience", e.target.value)} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-600 outline-none transition-all font-medium" />
-                  </div>
-                </div>
+                    <div className="space-y-1">
+                      <h2 className="text-2xl font-black text-slate-900">{user.fullName}</h2>
+                      <p className="text-slate-500 font-medium text-sm flex items-center justify-center gap-1.5 uppercase tracking-widest text-[10px] font-bold">
+                        <Zap size={10} className="text-amber-500" />
+                        {user.primaryDomain || "Verified Specialist"}
+                      </p>
+                    </div>
 
-                <div className="mt-8 space-y-4">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Vetted Skills</label>
-                  <div className="flex flex-wrap gap-2">
-                    {skillOptions.map((skill) => (
-                      <button
-                        key={skill}
-                        onClick={() => handleSkillToggle(skill)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border-2 ${profileForm.skills.includes(skill)
-                          ? "bg-indigo-600 border-indigo-600 text-white"
-                          : "bg-white border-slate-100 text-slate-600 hover:border-slate-300"}`}
-                      >
-                        {skill}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                    <div className="w-full pt-6 space-y-3">
+                      <div className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Knowledge Score</span>
+                        <span className="font-black text-indigo-600">{user.knowledgeScore}%</span>
+                      </div>
+                      <div className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Platform Rank</span>
+                        <span className="font-black text-emerald-600 uppercase text-[10px]">Elite Tier</span>
+                      </div>
+                    </div>
 
-                <div className="mt-10 flex gap-4">
-                  <Button onClick={handleSaveProfile} disabled={savingProfile} className="h-14 px-10 rounded-2xl shadow-lg">
-                    {savingProfile ? "Syncing..." : "Secure & Save"}
-                  </Button>
+                    <button
+                      onClick={() => setShowProfile(false)}
+                      className="text-slate-400 hover:text-slate-600 pt-4 text-xs font-bold uppercase tracking-widest transition-all"
+                    >
+                      Hide Profile Details
+                    </button>
+                  </div>
+
+                  {/* Main Form Area */}
+                  <div className="p-10 md:p-14 space-y-10">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Technical Profile</h3>
+                        <p className="text-slate-400 text-sm font-medium">Update your vetted credentials in real-time.</p>
+                      </div>
+                      <Award className="text-indigo-600" size={32} />
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-8">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                          <UserIcon size={10} className="text-indigo-600" /> Full Name
+                        </label>
+                        <input
+                          type="text"
+                          value={profileForm.fullName}
+                          onChange={(e) => handleProfileFieldChange("fullName", e.target.value)}
+                          className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-all font-bold text-slate-900"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                          <Phone size={10} className="text-indigo-600" /> Secure Phone
+                        </label>
+                        <input
+                          type="text"
+                          value={profileForm.phone}
+                          onChange={(e) => handleProfileFieldChange("phone", e.target.value)}
+                          className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-all font-bold text-slate-900"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                          <Award size={10} className="text-indigo-600" /> Industry Experience
+                        </label>
+                        <input
+                          type="text"
+                          value={profileForm.experience}
+                          onChange={(e) => handleProfileFieldChange("experience", e.target.value)}
+                          className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-all font-bold text-slate-900"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                          <Clock size={10} className="text-indigo-600" /> Global Timezone
+                        </label>
+                        <input
+                          type="text"
+                          value={profileForm.timezone}
+                          onChange={(e) => handleProfileFieldChange("timezone", e.target.value)}
+                          className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-all font-bold text-slate-900"
+                          placeholder="e.g. IST (UTC+5:30)"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Vetted Skillset Matrix</label>
+                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md uppercase">{profileForm.skills.length} Vetted</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2.5">
+                        {skillOptions.map((skill) => (
+                          <button
+                            key={skill}
+                            onClick={() => handleSkillToggle(skill)}
+                            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all border-2 ${profileForm.skills.includes(skill)
+                              ? "bg-slate-900 border-slate-900 text-white translate-y-[-2px] shadow-lg shadow-slate-900/10"
+                              : "bg-white border-slate-100 text-slate-500 hover:border-slate-300"}`}
+                          >
+                            {skill}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pt-8 border-t border-slate-100 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+                        <ShieldCheck size={14} className="text-emerald-500" />
+                        System integrity secured via AES-256
+                      </div>
+                      <Button onClick={handleSaveProfile} disabled={savingProfile} className="h-14 px-12 rounded-2xl shadow-xl shadow-indigo-600/30">
+                        {savingProfile ? "Synchronizing..." : "Archive & Protect"}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </Card>
             </motion.div>
@@ -398,7 +520,21 @@ export default function Dashboard() {
                             <TrendingUp className="text-indigo-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" size={20} />
                           </div>
                           <div className="flex items-center justify-between mt-6">
-                            <span className="text-lg font-black text-emerald-600">{formatMoney(task.weeklyPayout, currency)}<small className="text-[10px] font-bold text-slate-400 ml-1">/WEEK</small></span>
+                            <div className="text-right">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                                {task.payoutSchedule === "one-time" ? "Final Settlement" : "Weekly Payout"}
+                              </p>
+                              <span className="text-lg font-black text-emerald-600">
+                                {task.payoutSchedule === "one-time" && task.weeklyPayout === 0 ? (
+                                  "Manual Payment"
+                                ) : (
+                                  <>
+                                    {formatMoney((task.workerPayouts && user && task.workerPayouts[user.id]) || task.weeklyPayout, currency)}
+                                    {task.payoutSchedule !== "one-time" && <small className="text-[10px] font-bold text-slate-400 ml-1">/WEEK</small>}
+                                  </>
+                                )}
+                              </span>
+                            </div>
                             <Button onClick={() => router.push("/tasks")} className="h-11 px-6 rounded-xl">Control Center</Button>
                           </div>
                         </div>
@@ -434,7 +570,14 @@ export default function Dashboard() {
                             </div>
                           </div>
                           <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100">
-                            <span className="text-lg font-black text-emerald-600">{formatMoney(task.weeklyPayout, currency)}</span>
+                            <div className="text-right">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                                {task.payoutSchedule === "one-time" ? "One-time" : "Weekly"}
+                              </p>
+                              <span className="text-lg font-black text-emerald-600">
+                                {task.payoutSchedule === "one-time" && task.weeklyPayout === 0 ? "Manual" : formatMoney(task.weeklyPayout, currency)}
+                              </span>
+                            </div>
                             <Button onClick={() => handleAcceptTask(task.id)} disabled={!user.demoTaskCompleted} className="h-11 px-6 rounded-xl">Accept Slot</Button>
                           </div>
                         </div>

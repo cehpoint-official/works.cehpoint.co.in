@@ -248,6 +248,20 @@ export default function Signup() {
       setLoading(true);
       const result = await googleAuth();
       const user = result.user;
+
+      if (!user.email) {
+        toast.error("Google account must have an email.");
+        return;
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(user.email);
+      if (existingUser) {
+        toast.error("An account with this email already exists. Please login instead.");
+        router.push("/login");
+        return;
+      }
+
       setAuthMethod(method);
       setAuthUid(user.uid);
       setAuthEmailVerified(user.emailVerified ?? false);

@@ -98,7 +98,10 @@ export function findWorkerForTask(
         const currentLoad = workerTaskCounts[worker.id] || 0;
         const rawSkills = Array.isArray(worker.skills) ? worker.skills : [];
         const workerSkills = rawSkills.map((s) => String(s).toLowerCase());
-        const matchingSkills = requiredSkills.filter((req) => workerSkills.includes(req.toLowerCase()));
+        const matchingSkills = requiredSkills.filter((req) =>
+            workerSkills.includes(req.toLowerCase()) ||
+            (worker.primaryDomain && worker.primaryDomain.toLowerCase() === req.toLowerCase())
+        );
         const matchCount = matchingSkills.length;
         const totalRequired = requiredSkills.length;
         const matchPercentage = totalRequired > 0 ? (matchCount / totalRequired) * 100 : 0;
@@ -113,7 +116,7 @@ export function findWorkerForTask(
         else if (currentLoad >= WORKLOAD_LIMIT) {
             status = "BUSY (Too many tasks)";
         }
-        else if (matchPercentage < SKILL_THRESHOLD_PERCENT) {
+        else if (matchPercentage < SKILL_THRESHOLD_PERCENT && matchCount === 0) {
             status = `LOW SKILL (${matchPercentage.toFixed(0)}%)`;
         }
 

@@ -24,7 +24,8 @@ import {
   Zap,
   Mail,
   MessageSquare,
-  X
+  X,
+  Undo2
 } from "lucide-react";
 
 import Layout from "../components/Layout";
@@ -91,6 +92,17 @@ export default function Tasks() {
   const [newChecklistItem, setNewChecklistItem] = useState("");
   const [activeChatTask, setActiveChatTask] = useState<string | null>(null);
 
+  // 🔹 Resignation Modal State
+  const [resignationModal, setResignationModal] = useState<{
+    visible: boolean;
+    taskId: string | null;
+  }>({
+    visible: false,
+    taskId: null,
+  });
+  const [resignationReason, setResignationReason] = useState("");
+  const [requestingResignation, setRequestingResignation] = useState(false);
+
   // AUTH CHECK
   useEffect(() => {
     const current = storage.getCurrentUser();
@@ -108,13 +120,24 @@ export default function Tasks() {
       setLoading(true);
       const all = await storage.getTasks();
       const myTasks = all.filter((t) => {
+        // If I declined it, I NEVER see it (unless it was already assigned to me?? 
+        // usually declinedBy is only for available broadcasted tasks)
+        if (t.declinedBy?.includes(userId)) return false;
+
+        // If explicitly assigned to me
         if (t.assignedTo === userId) return true;
-        if (t.assignedWorkerIds?.includes(userId)) return true; // Multi-worker support
+
+        // If I'm one of the workers in a team task
+        if (t.assignedWorkerIds?.includes(userId)) return true;
+
+        // If it's an open broadcast (available)
         if (t.status === "available") {
+          // If no specific candidates were targeted, it's open to all
           if (!Array.isArray(t.candidateWorkerIds) || t.candidateWorkerIds.length === 0) return true;
+          // Or if I'm specifically invited to this broadcast
           if (t.candidateWorkerIds.includes(userId)) return true;
         }
-        if (t.declinedBy?.includes(userId)) return false;
+
         return false;
       });
       setTasks(myTasks);
@@ -137,9 +160,9 @@ export default function Tasks() {
       }
       await storage.updateTask(taskId, {
         status: "in-progress",
-        assignedTo: user.id,
-        assignedWorkerIds: [user.id],
-        assignedAt: new Date().toISOString(),
+        assignedTo: task.assignedTo || user.id, // Keep original if exists
+        assignedWorkerIds: task.assignedWorkerIds?.length ? task.assignedWorkerIds : [user.id],
+        assignedAt: task.assignedAt || new Date().toISOString(),
       });
       toast.success("Deployment Confirmed!");
       loadTasks(user.id);
@@ -205,6 +228,39 @@ export default function Tasks() {
       toast.error("Cloud update failed");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRequestResignation = async () => {
+    if (!resignationModal.taskId || !resignationReason.trim()) return;
+    try {
+      setRequestingResignation(true);
+      await storage.updateTask(resignationModal.taskId, {
+        resignationRequested: true,
+        resignationReason: resignationReason.trim(),
+        resignationRequestedAt: new Date().toISOString(),
+        resignationWorkerId: user.id
+      });
+
+      // Notify Admin
+      await storage.createNotification({
+        userId: "admin",
+        title: "Project Resignation Request",
+        message: `${user?.fullName} has requested to step back from project "${tasks.find(t => t.id === resignationModal.taskId)?.title}". Reason: ${resignationReason.substring(0, 50)}...`,
+        type: "warning",
+        read: false,
+        createdAt: new Date().toISOString(),
+        link: "/admin/tasks"
+      });
+
+      toast.success("Withdrawal request dispatched to headquarters.");
+      setResignationModal({ visible: false, taskId: null });
+      setResignationReason("");
+      if (user) loadTasks(user.id);
+    } catch (e) {
+      toast.error("Dispatch failed.");
+    } finally {
+      setRequestingResignation(false);
     }
   };
 
@@ -360,18 +416,24 @@ ${submitForm.docUrl ? `**Docs:** ${submitForm.docUrl}` : ""}
                             task.status === 'in-progress' ? 'bg-indigo-50 text-indigo-600' :
                               'bg-amber-50 text-amber-600'
                           }`}>
-                          {task.status.replace('-', ' ')}
+                          {task.resignationRequested ? "Withdrawal Pending" : task.status.replace('-', ' ')}
                         </div>
                         <div className="text-right">
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
                             {task.payoutSchedule === "one-time" ? "Final Settlement" : "Weekly Payout"}
                           </p>
                           <p className="text-xl font-black text-emerald-600">
-                            {formatMoney(
-                              (task.workerPayouts && user && task.workerPayouts[user.id]) || task.weeklyPayout,
-                              currency
+                            {task.payoutSchedule === "one-time" && (!task.weeklyPayout && (!task.workerPayouts || !user || !task.workerPayouts[user.id])) ? (
+                              "Manual Payment"
+                            ) : (
+                              <>
+                                {formatMoney(
+                                  (task.workerPayouts && user && task.workerPayouts[user.id]) || task.weeklyPayout,
+                                  currency
+                                )}
+                                {task.payoutSchedule !== "one-time" && <span className="text-[10px] ml-1 opacity-40">/WEEK</span>}
+                              </>
                             )}
-                            {task.payoutSchedule !== "one-time" && <span className="text-[10px] ml-1 opacity-40">/WEEK</span>}
                           </p>
                         </div>
                       </div>
@@ -431,8 +493,23 @@ ${submitForm.docUrl ? `**Docs:** ${submitForm.docUrl}` : ""}
                       )}
                       {task.status === "in-progress" && (
                         <>
-                          <Button onClick={() => openSubmitModal(task.id)} className="flex-1 h-12 rounded-xl text-[10px] uppercase font-black tracking-widest">Final Submit</Button>
-                          <Button onClick={() => openProgressModal(task)} variant="outline" className="h-12 border-indigo-100 text-indigo-600 hover:bg-indigo-50 rounded-xl">Progress Sync</Button>
+                          {!task.resignationRequested ? (
+                            <>
+                              <Button onClick={() => openSubmitModal(task.id)} className="flex-1 h-12 rounded-xl text-[10px] uppercase font-black tracking-widest">Final Submit</Button>
+                              <Button onClick={() => openProgressModal(task)} variant="outline" className="h-12 border-indigo-100 text-indigo-600 hover:bg-indigo-50 rounded-xl">Progress Sync</Button>
+                              <Button
+                                onClick={() => setResignationModal({ visible: true, taskId: task.id })}
+                                variant="outline"
+                                className="h-12 border-rose-100 text-rose-600 hover:bg-rose-50 rounded-xl px-4"
+                              >
+                                <Undo2 size={18} />
+                              </Button>
+                            </>
+                          ) : (
+                            <div className="w-full flex items-center justify-center gap-2 py-4 text-[10px] font-black uppercase text-amber-600 tracking-widest bg-amber-50 rounded-xl">
+                              <Clock size={16} /> Resignation under Review
+                            </div>
+                          )}
                           <Button onClick={() => setActiveChatTask(task.id)} variant="outline" className="h-12 border-indigo-100 text-indigo-600 hover:bg-indigo-50 rounded-xl px-4">
                             <MessageSquare size={18} />
                           </Button>
@@ -612,6 +689,62 @@ ${submitForm.docUrl ? `**Docs:** ${submitForm.docUrl}` : ""}
               currentUser={user!}
               onClose={() => setActiveChatTask(null)}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Resignation Modal */}
+      {resignationModal.visible && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] w-full max-w-lg p-8 shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-2xl font-black text-slate-900">Step Back Request</h3>
+                <p className="text-sm text-slate-500 font-medium">Please provide your reason for leaving the project hub.</p>
+              </div>
+              <button
+                onClick={() => setResignationModal({ visible: false, taskId: null })}
+                className="w-10 h-10 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 transition-all"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="p-5 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-4">
+                <AlertCircle className="text-rose-600 shrink-0 mt-1" size={24} />
+                <p className="text-xs text-rose-700 font-bold leading-relaxed">
+                  NOTE: Stepping back from a project too many times may impact your Elite Status and platform ranking. Please ensure your reason is valid.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Reason for Withdrawal</label>
+                <textarea
+                  value={resignationReason}
+                  onChange={(e) => setResignationReason(e.target.value)}
+                  className="w-full h-32 px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:bg-white focus:border-rose-600 transition-all font-medium text-sm text-slate-700 resize-none"
+                  placeholder="e.g. Skill mismatch, Personal bandwidth issues, or Technical blockers..."
+                />
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <Button
+                  onClick={() => setResignationModal({ visible: false, taskId: null })}
+                  variant="outline"
+                  className="flex-1 h-14 rounded-2xl"
+                >
+                  Stay on Project
+                </Button>
+                <Button
+                  onClick={handleRequestResignation}
+                  disabled={requestingResignation || !resignationReason.trim()}
+                  className="flex-1 h-14 rounded-2xl bg-rose-600 shadow-xl shadow-rose-600/20"
+                >
+                  {requestingResignation ? "Dispatching..." : "Confirm Step Back"}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

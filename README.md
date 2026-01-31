@@ -1,124 +1,56 @@
-# works.cehpoint.co.in
-A task-based work platform with worker dashboards, admin controls, payouts, and currency support
-# 🚀 **Cehpoint Workforce Platform**
+# 🌐 Cehpoint Work: Immersive Specialist Platform
 
-*A modern task-based workforce & payout management system built with Next.js + Firebase.*
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/db8d9d36-13c8-4b99-bd38-a2f879550138"/>
-</p>
+Welcome to the **Cehpoint Work** Command Center. This is a high-fidelity, production-grade ecosystem designed for elite specialists to manage missions, track professional growth, and secure transparent payouts.
 
 ---
 
-## 🏅 **Badges**
+## 🚀 "Model-Ready" Quick Start
+If you are an AI model or developer inheriting this project, please follow the documentation index below for a 360-degree understanding of the architecture.
 
-<p align="left">
-  <img src="https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=nextdotjs" />
-  <img src="https://img.shields.io/badge/TailwindCSS-3.4-blue?style=for-the-badge&logo=tailwindcss" />
-  <img src="https://img.shields.io/badge/Firebase-Firestore-orange?style=for-the-badge&logo=firebase" />
-  <img src="https://img.shields.io/badge/Vercel-Deployed-black?style=for-the-badge&logo=vercel" />
-</p>
-
----
-
-## 📸 **UI Preview**
-
-### **Worker Dashboard**
-
-![Worker Dashboard](https://github.com/user-attachments/assets/6a24bac5-2fda-4c5a-bd43-1eb3ee84beb5)
-
-### **Admin Task Manager**
-
-![Admin Tasks](https://github.com/user-attachments/assets/3027e180-5122-4b22-ac75-73c0a3126928)
+### 📚 Documentation Hub
+1.  [**🛠️ Tech Stack & Dependencies**](./docs/TECH_STACK.md): Detailed mapping of Next.js 16, Firebase, Three.js, and Framer Motion roles.
+2.  [**🌊 System Flow & State**](./docs/SYSTEM_FLOW.md): End-to-end lifecycle of tasks, currency synchronization, and role-based routing.
+3.  [**🗺️ AI-Model Handover Map**](./docs/AI_DEVELOPER_MAP.md): A topological guide to every directory and file, with extension guides for future features.
 
 ---
 
-## 🧭 System Architecture
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/6bcd638d-6118-4686-966a-79f44a21885c"/>
-</p>
+## 🚄 Local Development Suite
 
+### 1. Pre-requisites
+- **Node.js**: v20 or higher.
+- **Firebase**: A configured project with Auth, Firestore, and Storage enabled.
 
----
+### 2. Environment Setup
+Create a `.env.local` in the root:
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=your_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_bucket
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+```
 
-## ✨ **Core Features**
-
-### 👷 Workers
-
-* Personalized dashboard
-* Choose currency (**USD / INR**)
-* Skill-based task recommendations
-* Daily submission system
-* Withdraw via **UPI / Bank**
-* Update profile, skills & payout details
-
-### 🛠️ Admin
-
-* Approve / suspend / terminate workers
-* Create, assign, approve, reject tasks
-* Manage payments & withdrawal requests
-* Platform-wide analytics
-* Currency preference control
-
----
-
-## 🧰 **Tech Stack**
-
-| Layer    | Technology                    |
-| -------- | ----------------------------- |
-| Frontend | Next.js 14, React, TypeScript |
-| Styling  | Tailwind CSS                  |
-| Backend  | Firebase Firestore            |
-| Hosting  | Vercel                        |
-| Icons    | Lucide Icons                  |
-
----
-
-## 📦 **Installation**
-
+### 3. Installation & Boot
 ```bash
-git clone https://github.com/cehpoint-official/work-platform.git
-cd work-platform
+# Install high-fidelity dependencies
 npm install
+
+# Launch the Command Center (Local Dev)
 npm run dev
 ```
 
 ---
 
-## 🔐 **Environment Variables**
-
-Create `.env.local`:
-
-```
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
-```
+## 🏗️ Project Philosophy
+**Cehpoint Work** is built on the principle of **Interaction First**. 
+- Every transition is managed by **Framer Motion**.
+- The onboarding experience uses **WebGL (Three.js)** for ultra-premium immersion.
+- The design system follows a **"Command Center"** aesthetic: dark, high-contrast, and informative.
 
 ---
 
-## 💱 **Currency Logic**
+## 🛡️ Maintainer Integrity
+This repository is optimized for **Clarity and Extensibility**. All business logic is centralized in `/utils/storage.ts` to ensure that data integrity can be audited with zero friction.
 
-* Base storage currency → **USD**
-* Worker/Admin can switch UI currency
-* Auto-convert amounts using fixed INR rate
-* Dynamic icon switch (₹ / $)
-
----
-
-## 🗺️ **Roadmap**
-
-* Real-time Firestore listeners
-* Monthly earning reports
-* Automated UPI verification
-* Worker KYC onboarding
-
----
-
-## 👤 **Contributer**
-
-**Sarthak Roy**
-GitHub: (https://github.com/Sarthak4321)
+*Built with precision by Cehpoint Systems.*

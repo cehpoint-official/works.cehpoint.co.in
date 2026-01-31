@@ -431,8 +431,15 @@ export default function Payments() {
                             </div>
                             <div>
                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{format(new Date(p.createdAt), 'MMM dd, yyyy')}</p>
-                              <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">{p.type.replace('-', ' ')}</h3>
-                              <p className="text-xs font-medium text-slate-500">{p.payoutMethodDetails || 'Direct Ledger Entry'}</p>
+                              <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">
+                                {p.type === 'task-payment' ? 'Mission Payout' :
+                                  p.type === 'manual' ? 'Standard Credit' :
+                                    p.type === 'bonus' ? 'Performance Bonus' :
+                                      p.type.replace('-', ' ')}
+                              </h3>
+                              <p className="text-xs font-medium text-slate-500 italic">
+                                {p.payoutMethodDetails || (p.type === 'withdrawal' ? 'Secure Redistribution' : 'Direct Ledger Entry')}
+                              </p>
                             </div>
                           </div>
 

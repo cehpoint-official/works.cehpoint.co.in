@@ -9,7 +9,7 @@ import Card from "../../components/Card";
 import Button from "../../components/Button";
 
 import { storage } from "../../utils/storage";
-import type { User, Task, Payment, Currency } from "../../utils/types";
+import type { User, Task, Payment, Currency, Domain } from "../../utils/types";
 import { findWorkerForTask, AssignmentExplanation } from "../../utils/taskAssignment";
 import { mailService } from "../../utils/mailService";
 import Chat from "../../components/Chat";
@@ -34,7 +34,8 @@ import {
   Search,
   UserMinus,
   AlertTriangle,
-  ShieldAlert
+  ShieldAlert,
+  Undo2
 } from "lucide-react";
 
 import { format } from "date-fns";
@@ -153,12 +154,8 @@ export default function AdminTasks() {
   });
 
   // 🔹 Dynamic Skills
-  const [availableSkills, setAvailableSkills] = useState<string[]>([
-    "React", "Node.js", "Python", "Java", "PHP", "Angular", "Vue.js",
-    "Video Editing", "Adobe Premiere", "After Effects",
-    "UI/UX Design", "Graphic Design", "Content Writing",
-    "Digital Marketing", "SEO"
-  ]);
+  const [availableSkills, setAvailableSkills] = useState<string[]>([]);
+  const [domains, setDomains] = useState<Domain[]>([]);
 
   /* -------------------------------------------------------
    * AUTH + INITIAL LOAD
@@ -179,19 +176,31 @@ export default function AdminTasks() {
 
       try {
         setPageLoading(true);
-        const [users, list, dbSkills] = await Promise.all([
+        const [users, list, dbSkills, dbDomains] = await Promise.all([
           storage.getUsers(),
           storage.getTasks(),
           storage.getSkills(),
+          storage.getDomains(),
         ]);
-
-        if (dbSkills && dbSkills.length > 0) {
-          setAvailableSkills(prev => Array.from(new Set([...prev, ...dbSkills])));
-        }
 
         if (!mounted) return;
 
-        setWorkers(users.filter((u) => u.role === "worker"));
+        const workerList = users.filter((u) => u.role === "worker");
+        setWorkers(workerList);
+
+        // Aggregate unique names from Domains in DB + Skills in DB
+        const domainNames = (dbDomains || []).map(d => d.name);
+
+        const allExpertise = Array.from(new Set([
+          ...domainNames,
+          ...(dbSkills || []),
+          ...(dbDomains || []).flatMap(d => d.stacks || [])
+        ])).sort();
+
+        if (dbDomains) setDomains(dbDomains);
+
+        setAvailableSkills(allExpertise);
+
         setTasks(
           list.sort(
             (a, b) =>
@@ -431,8 +440,14 @@ export default function AdminTasks() {
       if (action === 'broadcast') {
         const candidateEmails = assignmentModal.candidates.map(u => u.email).filter(Boolean);
         if (candidateEmails.length > 0) {
-          mailService.sendBroadcastNotification(candidateEmails, assignmentModal.pendingTask.title)
-            .catch(err => console.error("[BroadcastEmails] failed:", err));
+          toast.promise(
+            mailService.sendBroadcastNotification(candidateEmails, finalPayload.title),
+            {
+              loading: 'Dispatching broadcast emails...',
+              success: `Broadcast sent to ${candidateEmails.length} specialists.`,
+              error: 'Broadcast email failed (check SMTP settings).',
+            }
+          );
         }
       }
 
@@ -453,11 +468,15 @@ export default function AdminTasks() {
   const performAssign = async (taskId: string, workerId: string) => {
     try {
       setBusy(true);
+      const task = tasks.find(t => t.id === taskId);
+      const currentIds = task?.assignedWorkerIds || [];
+      const newIds = Array.from(new Set([...currentIds, workerId]));
+
       await storage.updateTask(taskId, {
-        assignedTo: workerId,
-        assignedWorkerIds: [workerId],
+        assignedTo: workerId, // usually the most recent or primary
+        assignedWorkerIds: newIds,
         status: "in-progress",
-        assignedAt: new Date().toISOString(),
+        assignedAt: task?.assignedAt || new Date().toISOString(),
       });
       await reloadTasks();
       toast.success("Task assigned.");
@@ -510,6 +529,88 @@ export default function AdminTasks() {
     }
   };
 
+  const handleApproveResignation = async (task: Task) => {
+    try {
+      setBusy(true);
+      const workerId = task.resignationWorkerId || task.assignedTo || (task.assignedWorkerIds && task.assignedWorkerIds[0]);
+
+      if (!workerId) {
+        toast.error("Could not identify the worker to release.");
+        return;
+      }
+
+      // Filter out the resigning worker
+      const updatedWorkerIds = (task.assignedWorkerIds || []).filter(id => id !== workerId);
+
+      const updates: any = {
+        assignedWorkerIds: updatedWorkerIds,
+        resignationRequested: false,
+        resignationReason: "",
+        resignationRequestedAt: "",
+        resignationWorkerId: null
+      };
+
+      // Update primary assignedTo if necessary
+      if (task.assignedTo === workerId) {
+        updates.assignedTo = updatedWorkerIds.length > 0 ? updatedWorkerIds[0] : null;
+      }
+
+      // If no workers left, reset status to available
+      if (updatedWorkerIds.length === 0) {
+        updates.status = "available";
+        updates.assignedAt = null;
+      }
+
+      await storage.updateTask(task.id, updates);
+
+      await storage.createNotification({
+        userId: workerId,
+        title: "Withdrawal Approved",
+        message: `Admin has approved your request to step back from project "${task.title}". Your seat has been released.`,
+        type: "info",
+        read: false,
+        createdAt: new Date().toISOString()
+      });
+
+      toast.success("Specialist released from project.");
+      await reloadTasks();
+    } catch (e) {
+      toast.error("Failed to release specialist.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDenyResignation = async (task: Task) => {
+    try {
+      setBusy(true);
+      await storage.updateTask(task.id, {
+        resignationRequested: false,
+        resignationReason: "",
+        resignationRequestedAt: ""
+      });
+
+      const workerId = task.assignedTo || (task.assignedWorkerIds && task.assignedWorkerIds[0]);
+      if (workerId) {
+        await storage.createNotification({
+          userId: workerId,
+          title: "Withdrawal Denied",
+          message: `Admin has reviewed and denied your request to step back from "${task.title}". Please continue your assignment.`,
+          type: "error",
+          read: false,
+          createdAt: new Date().toISOString()
+        });
+      }
+
+      toast.success("Resignation request denied.");
+      await reloadTasks();
+    } catch (e) {
+      toast.error("Operation failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleApproveTask = async (taskId: string) => {
     const job = tasks.find((t) => t.id === taskId);
     if (!job || (!job.assignedTo && (!job.assignedWorkerIds || job.assignedWorkerIds.length === 0))) return;
@@ -527,24 +628,29 @@ export default function AdminTasks() {
       const primaryUid = job.assignedTo || (job.assignedWorkerIds && job.assignedWorkerIds[0]);
       if (!primaryUid) throw new Error("No worker assigned");
 
+      // 🔹 Calculate correct payout (Priority: Override > Base)
+      const payoutAmount = (job.workerPayouts && job.workerPayouts[primaryUid]) ?? job.weeklyPayout;
+      const isOneTime = job.payoutSchedule === "one-time";
+
       await storage.createPayment({
         userId: primaryUid,
-        amount: job.weeklyPayout,
-        type: "task-payment",
+        amount: payoutAmount,
+        type: isOneTime ? "manual" : "task-payment",
         status: "completed",
         taskId: job.id,
         createdAt: new Date().toISOString(),
         completedAt: new Date().toISOString(),
+        payoutMethodDetails: `${isOneTime ? "Project Settlement" : "Weekly Payout"}: ${job.title}`
       });
 
       const worker = await storage.getUserById(primaryUid);
       if (worker) {
-        await storage.updateUser(worker.id, { balance: (worker.balance || 0) + job.weeklyPayout });
+        await storage.updateUser(worker.id, { balance: (worker.balance || 0) + payoutAmount });
 
         await storage.createNotification({
           userId: worker.id,
           title: "Payment Received",
-          message: `Your work on "${job.title}" was approved. ${job.weeklyPayout.toFixed(2)} USD added to balance.`,
+          message: `Your work on "${job.title}" was approved. ${formatMoney(payoutAmount, worker.preferredCurrency || "USD")} ${isOneTime ? "Settlement" : "Weekly Payout"} credited.`,
           type: "success",
           read: false,
           createdAt: new Date().toISOString(),
@@ -691,11 +797,9 @@ export default function AdminTasks() {
                     className="w-full h-11 px-4 bg-white border border-gray-200 rounded-xl outline-none font-medium text-sm"
                   >
                     <option value="">Choose category...</option>
-                    <option value="Development">Development</option>
-                    <option value="Design">Design</option>
-                    <option value="Video Editing">Video Editing</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Writing">Writing</option>
+                    {domains.map((d) => (
+                      <option key={d.id} value={d.name}>{d.name}</option>
+                    ))}
                     <option value="General">General</option>
                   </select>
                 </div>
@@ -745,45 +849,63 @@ export default function AdminTasks() {
                     placeholder="mentor@cehpoint.co.in"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Weekly Payout ({currency})</label>
+                <div className="md:col-span-1">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    {newTask.payoutSchedule === "one-time" ? `Final Project Grant (${currency})` : `Weekly Payout (${currency})`}
+                  </label>
                   <input
                     type="number"
                     value={weeklyPayoutInput}
                     onChange={handleWeeklyPayoutChange}
-                    className="w-full h-11 px-4 bg-white border border-gray-200 rounded-xl font-bold text-lg text-indigo-600 outline-none"
+                    className="w-full h-11 px-4 bg-white border border-gray-200 rounded-xl font-bold text-lg text-indigo-600 outline-none focus:border-indigo-600 transition-all"
                     placeholder="0.00"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Payout Schedule</label>
-                  <select
-                    value={newTask.payoutSchedule}
-                    onChange={(e) => setNewTask({ ...newTask, payoutSchedule: e.target.value as any })}
-                    className="w-full h-11 px-4 bg-white border border-gray-200 rounded-xl outline-none font-medium text-sm"
-                  >
-                    <option value="weekly">Weekly Payout</option>
-                    <option value="one-time">One-time / Manual</option>
-                  </select>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Payment Model</label>
+                  <div className="flex p-1 bg-white border border-gray-200 rounded-xl w-full">
+                    <button
+                      type="button"
+                      onClick={() => setNewTask({ ...newTask, payoutSchedule: "weekly" })}
+                      className={`flex-1 h-9 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${newTask.payoutSchedule === "weekly" ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                      Weekly Payout
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewTask({ ...newTask, payoutSchedule: "one-time" })}
+                      className={`flex-1 h-9 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${newTask.payoutSchedule === "one-time" ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                      Final Settlement
+                    </button>
+                  </div>
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Skill Matrix Selection</label>
                 <div className="flex flex-wrap gap-2">
-                  {availableSkills.map((skill) => (
-                    <button
-                      key={skill}
-                      type="button"
-                      onClick={() => handleSkillToggle(skill)}
-                      className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${newTask.skills.includes(skill)
-                        ? "border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-100"
-                        : "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
-                        }`}
-                    >
-                      {skill}
-                    </button>
-                  ))}
+                  {availableSkills
+                    .filter(skill => {
+                      if (!newTask.category || newTask.category === "General") return true;
+                      const selectedDomain = domains.find(d => d.name === newTask.category);
+                      if (!selectedDomain) return true;
+                      // Show if it's a stack of the selected domain OR if it's already selected
+                      return (selectedDomain.stacks || []).includes(skill) || newTask.skills.includes(skill);
+                    })
+                    .map((skill) => (
+                      <button
+                        key={skill}
+                        type="button"
+                        onClick={() => handleSkillToggle(skill)}
+                        className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${newTask.skills.includes(skill)
+                          ? "border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-100"
+                          : "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
+                          }`}
+                      >
+                        {skill}
+                      </button>
+                    ))}
                   <div className="flex gap-2 ml-auto">
                     <input
                       type="text"
@@ -815,7 +937,7 @@ export default function AdminTasks() {
                     type="text"
                     value={workerSearch}
                     onChange={(e) => setWorkerSearch(e.target.value)}
-                    placeholder="Search specialists by name or email..."
+                    placeholder="Search specialists by domain or expertise (e.g. SEO, Developer)..."
                     className="w-full h-12 pl-12 pr-4 bg-white border border-gray-100 rounded-2xl outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 transition-all font-medium text-sm shadow-sm"
                   />
                   {workerSearch && (
@@ -831,8 +953,8 @@ export default function AdminTasks() {
                 <div className="flex flex-wrap gap-2 max-h-56 overflow-y-auto p-5 bg-gray-50/50 border border-gray-100 rounded-[2rem] shadow-inner custom-scrollbar">
                   {workers
                     .filter(w =>
-                      w.fullName.toLowerCase().includes(workerSearch.toLowerCase()) ||
-                      w.email.toLowerCase().includes(workerSearch.toLowerCase()) ||
+                      (w.primaryDomain || "").toLowerCase().includes(workerSearch.toLowerCase()) ||
+                      (Array.isArray(w.skills) && w.skills.some(s => s.toLowerCase().includes(workerSearch.toLowerCase()))) ||
                       newTask.assignedWorkerIds.includes(w.id)
                     )
                     .sort((a, b) => {
@@ -865,12 +987,10 @@ export default function AdminTasks() {
                             {worker.fullName.charAt(0)}
                           </div>
                           <div className="text-left min-w-0">
-                            <p className="leading-none truncate max-w-[120px]">{worker.fullName}</p>
-                            {workerSearch && (
-                              <p className={`text-[9px] mt-0.5 font-medium truncate max-w-[120px] ${isSelected ? 'text-white/60' : 'text-gray-400'}`}>
-                                {worker.email}
-                              </p>
-                            )}
+                            <p className="leading-none truncate max-w-[120px] mb-1">{worker.fullName}</p>
+                            <p className={`text-[9px] font-black uppercase tracking-widest truncate max-w-[140px] ${isSelected ? 'text-white/80' : 'text-indigo-400'}`}>
+                              {worker.primaryDomain || (Array.isArray(worker.skills) && worker.skills.length > 0 ? worker.skills[0] : "SPECIALIST")}
+                            </p>
                           </div>
                           {isSelected && <X size={12} className="ml-1 opacity-60 hover:opacity-100 shrink-0" />}
                         </button>
@@ -878,8 +998,8 @@ export default function AdminTasks() {
                     })}
 
                   {workers.filter(w =>
-                    w.fullName.toLowerCase().includes(workerSearch.toLowerCase()) ||
-                    w.email.toLowerCase().includes(workerSearch.toLowerCase())
+                    (w.primaryDomain || "").toLowerCase().includes(workerSearch.toLowerCase()) ||
+                    (Array.isArray(w.skills) && w.skills.some(s => s.toLowerCase().includes(workerSearch.toLowerCase())))
                   ).length === 0 && (
                       <div className="w-full text-center py-8">
                         <UserIcon className="mx-auto text-gray-200 mb-2" size={32} />
@@ -1052,6 +1172,51 @@ export default function AdminTasks() {
                           </div>
                         </section>
 
+                        {task.resignationRequested && (
+                          <section className="animate-in fade-in slide-in-from-left-4 duration-500">
+                            <div className="bg-rose-50 border-2 border-rose-100 rounded-[2rem] p-8 space-y-6 relative overflow-hidden">
+                              <div className="absolute top-0 right-0 p-8 text-rose-100/20">
+                                <Undo2 size={120} />
+                              </div>
+                              <div className="flex items-center gap-4 text-rose-600">
+                                <AlertTriangle size={24} />
+                                <div>
+                                  <h4 className="text-lg font-black uppercase tracking-tight">Withdrawal Request Dispatched</h4>
+                                  <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest leading-none">
+                                    BY: {workers.find(w => w.id === (task.resignationWorkerId || task.assignedTo))?.fullName || "Unknown Specialist"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="space-y-3 relative z-10">
+                                <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest pl-1">Justification</p>
+                                <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-rose-100 text-sm font-medium text-rose-900 leading-relaxed shadow-sm">
+                                  "{task.resignationReason}"
+                                  <p className="mt-4 text-[10px] text-rose-400 font-bold uppercase whitespace-nowrap">
+                                    Requested on {task.resignationRequestedAt && format(new Date(task.resignationRequestedAt), "MMM dd, yyyy • hh:mm a")}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap gap-4 pt-4">
+                                <Button
+                                  onClick={() => handleApproveResignation(task)}
+                                  disabled={busy}
+                                  className="h-14 px-8 bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-600/20 rounded-2xl font-black uppercase tracking-widest text-[10px] flex-1"
+                                >
+                                  Approve Release
+                                </Button>
+                                <Button
+                                  onClick={() => handleDenyResignation(task)}
+                                  disabled={busy}
+                                  variant="outline"
+                                  className="h-14 px-8 border-rose-200 text-rose-600 hover:bg-white rounded-2xl font-black uppercase tracking-widest text-[10px] flex-1"
+                                >
+                                  Deny Request
+                                </Button>
+                              </div>
+                            </div>
+                          </section>
+                        )}
+
                         <section>
                           <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">REQUIREMENTS</h4>
                           <div className="flex flex-wrap gap-2">
@@ -1126,7 +1291,11 @@ export default function AdminTasks() {
                                 className="w-full px-5 py-4 bg-white border-2 border-gray-200 rounded-2xl font-black text-sm text-gray-900 focus:ring-8 focus:ring-indigo-50 transition-all outline-none appearance-none cursor-pointer"
                               >
                                 <option value="">MANUAL OVERRIDE...</option>
-                                {workers.map((w) => <option key={w.id} value={w.id}>{w.fullName}</option>)}
+                                {workers.map((w) => (
+                                  <option key={w.id} value={w.id}>
+                                    {w.fullName} — {(w.primaryDomain || (w.skills?.[0] || "Specialist")).toUpperCase()}
+                                  </option>
+                                ))}
                               </select>
                             </div>
                           ) : (
@@ -1145,7 +1314,9 @@ export default function AdminTasks() {
                                         </span>
                                       )}
                                     </div>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase truncate">{w.email}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase truncate">
+                                      {w.primaryDomain || (w.skills && w.skills.length > 0 ? w.skills.slice(0, 2).join(", ") : w.email)}
+                                    </p>
                                   </div>
                                   <button
                                     onClick={() => setTerminationModal({
@@ -1162,6 +1333,27 @@ export default function AdminTasks() {
                                   </button>
                                 </div>
                               ))}
+
+                              <div className="pt-4 border-t border-gray-100 mt-2">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-1">Add Replacement / Extra Hand</p>
+                                <select
+                                  value=""
+                                  onChange={(e) => handleAssignTask(task.id, e.target.value)}
+                                  className="w-full px-5 py-3 bg-white border-2 border-slate-100 rounded-xl font-bold text-xs text-slate-600 focus:border-indigo-600 transition-all outline-none appearance-none cursor-pointer"
+                                >
+                                  <option value="">SELECT SPECIALIST...</option>
+                                  {workers
+                                    .filter(w => !task.assignedWorkerIds?.includes(w.id))
+                                    .map((w) => {
+                                      const specialization = w.primaryDomain || (w.skills && w.skills.length > 0 ? w.skills.slice(0, 2).join(", ") : "Specialist");
+                                      return (
+                                        <option key={w.id} value={w.id}>
+                                          {w.fullName} — {specialization.toUpperCase()}
+                                        </option>
+                                      );
+                                    })}
+                                </select>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1207,7 +1399,8 @@ export default function AdminTasks() {
                       </div>
                     </div>
                   </div>
-                )}
+                )
+                }
               </Card>
             );
           })}
@@ -1215,111 +1408,119 @@ export default function AdminTasks() {
       </div>
 
       {/* Assignment Modal */}
-      {assignmentModal.visible && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-[40px] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-8 border-b flex justify-between items-center">
-              <h3 className="text-2xl font-black">Assignment Engine</h3>
-              <button onClick={() => setAssignmentModal({ ...assignmentModal, visible: false })} className="text-gray-400">✕</button>
-            </div>
-            <div className="p-8 overflow-y-auto flex-1">
-              {/* Simplified modal content for brevity, can be expanded back if needed */}
-              <p className="text-gray-600 mb-6">Confirm assignment for <strong>{assignmentModal.pendingTask?.title}</strong></p>
-              <div className="space-y-4">
-                {assignmentModal.bestWorker && (
-                  <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
-                    <p className="text-xs font-bold text-indigo-400 uppercase mb-1">Recommended Specialist</p>
-                    <p className="font-bold text-indigo-900">{assignmentModal.bestWorker.fullName}</p>
-                  </div>
-                )}
+      {
+        assignmentModal.visible && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-[40px] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-8 border-b flex justify-between items-center">
+                <h3 className="text-2xl font-black">Assignment Engine</h3>
+                <button onClick={() => setAssignmentModal({ ...assignmentModal, visible: false })} className="text-gray-400">✕</button>
+              </div>
+              <div className="p-8 overflow-y-auto flex-1">
+                {/* Simplified modal content for brevity, can be expanded back if needed */}
+                <p className="text-gray-600 mb-6">Confirm assignment for <strong>{assignmentModal.pendingTask?.title}</strong></p>
+                <div className="space-y-4">
+                  {assignmentModal.bestWorker && (
+                    <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                      <p className="text-xs font-bold text-indigo-400 uppercase mb-1">Recommended Specialist</p>
+                      <p className="font-bold text-indigo-900">{assignmentModal.bestWorker.fullName}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="p-8 border-t flex flex-wrap justify-end gap-3 bg-gray-50">
+                <Button variant="outline" onClick={() => setAssignmentModal({ ...assignmentModal, visible: false })}>Cancel</Button>
+                <Button onClick={() => confirmAssignment('create-open')} variant="outline">Open to All</Button>
+                <Button onClick={() => confirmAssignment('broadcast')} variant="outline">Broadcast</Button>
+                <Button onClick={() => confirmAssignment('assign')}>Confirm</Button>
               </div>
             </div>
-            <div className="p-8 border-t flex flex-wrap justify-end gap-3 bg-gray-50">
-              <Button variant="outline" onClick={() => setAssignmentModal({ ...assignmentModal, visible: false })}>Cancel</Button>
-              <Button onClick={() => confirmAssignment('create-open')} variant="outline">Open to All</Button>
-              <Button onClick={() => confirmAssignment('broadcast')} variant="outline">Broadcast</Button>
-              <Button onClick={() => confirmAssignment('assign')}>Confirm</Button>
-            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Termination Modal */}
-      {terminationModal.visible && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-[110] text-gray-900">
-          <div className="bg-white rounded-[40px] shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in duration-300">
-            <div className="p-8 border-b bg-red-50/50 flex flex-col gap-2">
-              <div className="flex justify-between items-center text-red-600">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle size={20} />
-                  <h3 className="text-xl font-black uppercase tracking-tight">Revoke Access</h3>
+      {
+        terminationModal.visible && (
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-[110] text-gray-900">
+            <div className="bg-white rounded-[40px] shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in duration-300">
+              <div className="p-8 border-b bg-red-50/50 flex flex-col gap-2">
+                <div className="flex justify-between items-center text-red-600">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle size={20} />
+                    <h3 className="text-xl font-black uppercase tracking-tight">Revoke Access</h3>
+                  </div>
+                  <button onClick={() => setTerminationModal({ ...terminationModal, visible: false })} className="text-gray-400 hover:text-gray-600">✕</button>
                 </div>
-                <button onClick={() => setTerminationModal({ ...terminationModal, visible: false })} className="text-gray-400 hover:text-gray-600">✕</button>
+                <p className="text-xs font-bold text-red-400 uppercase tracking-widest leading-none">Terminating {terminationModal.workerName}</p>
               </div>
-              <p className="text-xs font-bold text-red-400 uppercase tracking-widest leading-none">Terminating {terminationModal.workerName}</p>
-            </div>
-            <div className="p-8 space-y-6">
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Termination Reason</label>
-                <textarea
-                  value={terminationModal.reason}
-                  onChange={(e) => setTerminationModal({ ...terminationModal, reason: e.target.value })}
-                  className="w-full p-5 bg-gray-50 border-2 border-transparent focus:border-red-100 focus:bg-white rounded-3xl outline-none transition-all text-sm font-medium min-h-[120px]"
-                  placeholder="Specify the violation or reason for early project termination..."
-                />
+              <div className="p-8 space-y-6">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Termination Reason</label>
+                  <textarea
+                    value={terminationModal.reason}
+                    onChange={(e) => setTerminationModal({ ...terminationModal, reason: e.target.value })}
+                    className="w-full p-5 bg-gray-50 border-2 border-transparent focus:border-red-100 focus:bg-white rounded-3xl outline-none transition-all text-sm font-medium min-h-[120px]"
+                    placeholder="Specify the violation or reason for early project termination..."
+                  />
+                </div>
+                <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex items-start gap-4">
+                  <ShieldAlert className="text-red-500 shrink-0" size={18} />
+                  <p className="text-[11px] text-red-700 font-bold leading-tight">
+                    This action will immediately remove the specialist from the project and notify them of the termination reason.
+                  </p>
+                </div>
               </div>
-              <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex items-start gap-4">
-                <ShieldAlert className="text-red-500 shrink-0" size={18} />
-                <p className="text-[11px] text-red-700 font-bold leading-tight">
-                  This action will immediately remove the specialist from the project and notify them of the termination reason.
-                </p>
+              <div className="p-8 border-t bg-gray-50 flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setTerminationModal({ ...terminationModal, visible: false })} className="h-12 px-6 rounded-xl font-bold">Discard</Button>
+                <Button onClick={confirmTerminateWorker} className="h-12 px-8 bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-100 rounded-xl font-black uppercase tracking-widest text-[10px]">Execute Termination</Button>
               </div>
-            </div>
-            <div className="p-8 border-t bg-gray-50 flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setTerminationModal({ ...terminationModal, visible: false })} className="h-12 px-6 rounded-xl font-bold">Discard</Button>
-              <Button onClick={confirmTerminateWorker} className="h-12 px-8 bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-100 rounded-xl font-black uppercase tracking-widest text-[10px]">Execute Termination</Button>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Rejection Modal */}
-      {rejectionModal.visible && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50 text-white">
-          <div className="bg-white text-gray-900 rounded-[40px] shadow-2xl max-w-md w-full overflow-hidden">
-            <div className="p-8 border-b flex justify-between items-center">
-              <h3 className="text-xl font-bold">Feedback</h3>
-              <button onClick={() => setRejectionModal({ visible: false, taskId: null, reason: "" })}>✕</button>
-            </div>
-            <div className="p-8 space-y-4">
-              <textarea
-                value={rejectionModal.reason}
-                onChange={(e) => setRejectionModal({ ...rejectionModal, reason: e.target.value })}
-                className="w-full p-4 bg-gray-50 border rounded-2xl outline-none"
-                rows={4}
-                placeholder="Why is this being rejected?"
-              />
-            </div>
-            <div className="p-8 border-t flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setRejectionModal({ visible: false, taskId: null, reason: "" })}>Cancel</Button>
-              <Button variant="danger" onClick={confirmRejectTask}>Confirm Rejection</Button>
+      {
+        rejectionModal.visible && (
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50 text-white">
+            <div className="bg-white text-gray-900 rounded-[40px] shadow-2xl max-w-md w-full overflow-hidden">
+              <div className="p-8 border-b flex justify-between items-center">
+                <h3 className="text-xl font-bold">Feedback</h3>
+                <button onClick={() => setRejectionModal({ visible: false, taskId: null, reason: "" })}>✕</button>
+              </div>
+              <div className="p-8 space-y-4">
+                <textarea
+                  value={rejectionModal.reason}
+                  onChange={(e) => setRejectionModal({ ...rejectionModal, reason: e.target.value })}
+                  className="w-full p-4 bg-gray-50 border rounded-2xl outline-none"
+                  rows={4}
+                  placeholder="Why is this being rejected?"
+                />
+              </div>
+              <div className="p-8 border-t flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setRejectionModal({ visible: false, taskId: null, reason: "" })}>Cancel</Button>
+                <Button variant="danger" onClick={confirmRejectTask}>Confirm Rejection</Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Chat Overlay */}
-      {activeChatTask && (
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setActiveChatTask(null)}>
-          <div className="relative w-full max-w-2xl" onClick={e => e.stopPropagation()}>
-            <Chat
-              taskId={activeChatTask}
-              currentUser={currentAdmin!}
-              onClose={() => setActiveChatTask(null)}
-            />
+      {
+        activeChatTask && (
+          <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setActiveChatTask(null)}>
+            <div className="relative w-full max-w-2xl" onClick={e => e.stopPropagation()}>
+              <Chat
+                taskId={activeChatTask}
+                currentUser={currentAdmin!}
+                onClose={() => setActiveChatTask(null)}
+              />
+            </div>
           </div>
-        </div>
-      )}
-    </Layout>
+        )
+      }
+    </Layout >
   );
 }

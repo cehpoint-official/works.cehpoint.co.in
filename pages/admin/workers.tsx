@@ -46,6 +46,13 @@ export default function Workers() {
   const [currency, setCurrency] = useState<Currency>("USD");
   const [updatingCurrency, setUpdatingCurrency] = useState(false);
 
+  // 🔹 Manual Grant State
+  const [showGrantModal, setShowGrantModal] = useState(false);
+  const [grantWorker, setGrantWorker] = useState<User | null>(null);
+  const [grantAmount, setGrantAmount] = useState("");
+  const [grantNote, setGrantNote] = useState("");
+  const [granting, setGranting] = useState(false);
+
   useEffect(() => {
     const currentUser = storage.getCurrentUser();
 
@@ -199,6 +206,51 @@ export default function Workers() {
     }).catch(e => console.error("Notification failed", e));
     await loadWorkers();
     toast.error("Worker removed from system.");
+  };
+
+  const handleManualGrant = async () => {
+    if (!grantWorker || !grantAmount) return;
+    const amt = parseFloat(grantAmount);
+    if (isNaN(amt) || amt <= 0) return toast.error("Invalid amount");
+
+    try {
+      setGranting(true);
+      const baseUsd = currency === "INR" ? amt / INR_RATE : amt;
+
+      await storage.createPayment({
+        userId: grantWorker.id,
+        amount: baseUsd,
+        type: "manual",
+        status: "completed",
+        createdAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        payoutMethodDetails: grantNote || "Manual Performance Grant"
+      });
+
+      await storage.updateUser(grantWorker.id, {
+        balance: (grantWorker.balance || 0) + baseUsd
+      });
+
+      await storage.createNotification({
+        userId: grantWorker.id,
+        title: "Credit Received",
+        message: `Admin has credited ${formatMoney(baseUsd, grantWorker.preferredCurrency || "USD")} to your balance. Note: ${grantNote || 'Manual Hub Entry'}`,
+        type: "success",
+        read: false,
+        createdAt: new Date().toISOString(),
+        link: "/payments"
+      });
+
+      toast.success("Funds dispersed successfully.");
+      setShowGrantModal(false);
+      setGrantAmount("");
+      setGrantNote("");
+      loadWorkers();
+    } catch (e) {
+      toast.error("Disbursement failed.");
+    } finally {
+      setGranting(false);
+    }
   };
 
   const filteredWorkers = workers.filter((w) => {
@@ -496,6 +548,18 @@ export default function Workers() {
 
                     {worker.accountStatus !== "terminated" && (
                       <button
+                        onClick={() => {
+                          setGrantWorker(worker);
+                          setShowGrantModal(true);
+                        }}
+                        className="flex-1 xl:flex-none h-11 bg-white border border-indigo-200 text-indigo-600 rounded-xl font-bold text-[11px] uppercase tracking-wider hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+                      >
+                        <Banknote size={14} /> Grant Funds
+                      </button>
+                    )}
+
+                    {worker.accountStatus !== "terminated" && (
+                      <button
                         onClick={() => handleTerminate(worker.id)}
                         className="w-11 xl:w-full h-11 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all group/shred"
                       >
@@ -510,6 +574,58 @@ export default function Workers() {
           </div>
         </div>
       </div>
+
+      {/* Manual Grant Modal */}
+      {showGrantModal && grantWorker && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-black text-slate-900">Manual Grant</h3>
+              <button onClick={() => setShowGrantModal(false)} className="text-slate-400 hover:text-slate-600">
+                <ShieldAlert className="rotate-45" size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl">
+                <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold">
+                  {grantWorker.fullName.charAt(0)}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-900">{grantWorker.fullName}</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">{grantWorker.email}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Grant Amount ({currency})</label>
+                <input
+                  type="number"
+                  value={grantAmount}
+                  onChange={(e) => setGrantAmount(e.target.value)}
+                  className="w-full h-14 px-5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:bg-white focus:border-indigo-600 transition-all font-black text-xl text-indigo-600"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Memo / Purpose</label>
+                <input
+                  type="text"
+                  value={grantNote}
+                  onChange={(e) => setGrantNote(e.target.value)}
+                  className="w-full h-12 px-5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:bg-white focus:border-indigo-600 transition-all font-medium text-sm"
+                  placeholder="e.g. Special Performance Bonus"
+                />
+              </div>
+
+              <Button onClick={handleManualGrant} disabled={granting} className="w-full h-14 rounded-2xl shadow-xl shadow-indigo-600/20">
+                {granting ? "Processing Dispersal..." : "Confirm Grant"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

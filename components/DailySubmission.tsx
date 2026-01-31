@@ -49,9 +49,9 @@ export default function DailySubmissionForm({ userId, onSubmit }: DailySubmissio
 
   if (!user) return null;
 
-  const isDevelopmentWorker = user.skills?.some(skill =>
-    ['React', 'Node.js', 'Python', 'Java', 'PHP', 'Angular', 'Vue.js'].includes(skill)
-  );
+  const isDevelopmentWorker = (user.primaryDomain?.toLowerCase().includes("development")) || (user.skills?.some(skill =>
+    ['React', 'Node.js', 'Python', 'Java', 'PHP', 'Angular', 'Vue.js', 'Next.js', 'TypeScript'].includes(skill)
+  ));
 
   const getTodayDate = () => new Date().toISOString().split('T')[0];
 

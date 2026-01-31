@@ -317,6 +317,12 @@ export interface Task {
   projectDetails?: string;
   helperEmail?: string;
   payoutSchedule?: "weekly" | "one-time";
+
+  // 🔹 Resignation Request
+  resignationRequested?: boolean;
+  resignationReason?: string;
+  resignationRequestedAt?: string;
+  resignationWorkerId?: string;
 }
 
 /* ============================
