@@ -80,7 +80,7 @@ export default function AdminDailyWork() {
       setWorkers(workersList.filter((u) => u.role === "worker"));
     } catch (err) {
       console.error("Load error:", err);
-      toast.error("Failed to sync with command center.");
+      toast.error("Failed to load records.");
     } finally {
       setLoading(false);
     }
@@ -146,7 +146,7 @@ export default function AdminDailyWork() {
     try {
       // Assuming storage has a deleteSubmission or we use update to hide it
       // For now, let's just toast and log since delete is destructive
-      toast.error("System Override: Delete protocol not implemented for safety.");
+      toast.error("Delete function disabled for safety.");
     } catch (e) {
       toast.error("Operation failed.");
     }
@@ -157,7 +157,7 @@ export default function AdminDailyWork() {
       <Layout>
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
           <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="font-black text-indigo-600 tracking-widest text-xs uppercase">Syncing Logs...</p>
+          <p className="font-black text-indigo-600 tracking-widest text-xs uppercase">Loading Logs...</p>
         </div>
       </Layout>
     );
@@ -198,7 +198,7 @@ export default function AdminDailyWork() {
   return (
     <Layout>
       <Head>
-        <title>Command | Daily Logs</title>
+        <title>Daily Logs | Admin</title>
       </Head>
 
       <div className="max-w-[1400px] mx-auto space-y-12 pb-20">
@@ -214,7 +214,7 @@ export default function AdminDailyWork() {
               onClick={loadData}
               className="px-5 h-10 border border-gray-200 rounded-xl font-bold text-xs uppercase hover:bg-gray-50 transition-all flex items-center gap-2"
             >
-              Sync Records
+              Update Records
             </button>
           </div>
         </div>
@@ -247,7 +247,7 @@ export default function AdminDailyWork() {
                 <Filter size={18} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900 tracking-tight">Access Filters</h2>
+                <h2 className="text-xl font-bold text-gray-900 tracking-tight">Filters</h2>
                 <p className="text-xs text-gray-400 mt-0.5">Filter records with precision</p>
               </div>
             </div>
@@ -266,13 +266,13 @@ export default function AdminDailyWork() {
 
           <div className="grid md:grid-cols-3 gap-6">
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider ml-1">Specialist</label>
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider ml-1">Worker</label>
               <select
                 value={selectedWorker}
                 onChange={(e) => setSelectedWorker(e.target.value)}
                 className="w-full h-10 px-4 bg-gray-50 border border-gray-200 rounded-xl font-bold text-xs uppercase tracking-wider outline-none focus:border-indigo-600 transition-all cursor-pointer"
               >
-                <option value="all">Every Specialist</option>
+                <option value="all">Every Worker</option>
                 {workers.map(w => (
                   <option key={w.id} value={w.id}>{w.fullName}</option>
                 ))}
@@ -328,7 +328,7 @@ export default function AdminDailyWork() {
             <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Logs</h2>
             <div className="h-[1px] flex-1 bg-gray-100" />
             <span className="px-4 py-1.5 bg-gray-50 rounded-lg text-[10px] font-bold text-gray-400 uppercase tracking-wider border border-gray-100">
-              {filteredSubmissions.length} Data Points
+              {filteredSubmissions.length} Records
             </span>
           </div>
 

@@ -109,7 +109,7 @@ export default function AdminDomains() {
 
     const handleCreate = async () => {
         if (!newDomain.name.trim() || newDomain.stacks.length === 0) {
-            toast.error("Domain name and at least one tech stack required.");
+            toast.error("Category name and at least one skill required.");
             return;
         }
         try {
@@ -143,7 +143,7 @@ export default function AdminDomains() {
                 questions: editingDomain.questions || [],
                 demoTask: editingDomain.demoTask
             });
-            toast.success("Domain updated.");
+            toast.success("Category updated.");
             setEditingDomain(null);
             loadDomains();
         } catch (err) {
@@ -152,13 +152,13 @@ export default function AdminDomains() {
     };
 
     const handleDelete = async (id: string) => {
-        confirmToast("Permanently purge this protocol?", async () => {
+        confirmToast("Permanently delete this category?", async () => {
             try {
                 await storage.deleteDomain(id);
-                toast.success("Domain purged.");
+                toast.success("Category deleted.");
                 loadDomains();
             } catch (err) {
-                toast.error("Purge failed.");
+                toast.error("Failed to delete.");
             }
         });
     };
@@ -317,7 +317,7 @@ export default function AdminDomains() {
             <div className="max-w-[1400px] mx-auto space-y-8 pb-20 p-6 md:p-10">
                 <section className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-100">
                     <div className="space-y-1">
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Domain Matrix</h1>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Skill Categories</h1>
                         <p className="text-sm text-slate-500 font-medium">Configure primary expertise domains and specialized tech stacks.</p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -327,7 +327,7 @@ export default function AdminDomains() {
                         </Button>
                         <Button onClick={() => setShowAdd(!showAdd)}>
                             {showAdd ? <X size={18} /> : <Plus size={18} />}
-                            <span>{showAdd ? "Close" : "Initialize Domain"}</span>
+                            <span>{showAdd ? "Close" : "Add New Category"}</span>
                         </Button>
                     </div>
                 </section>
@@ -338,7 +338,7 @@ export default function AdminDomains() {
                             <Card className="bg-slate-50 border-slate-200 p-8 space-y-8">
                                 <div className="grid md:grid-cols-2 gap-8">
                                     <div className="space-y-4">
-                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Domain Identity</label>
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Category Name</label>
                                         <input
                                             type="text"
                                             value={newDomain.name}
@@ -348,7 +348,7 @@ export default function AdminDomains() {
                                         />
                                     </div>
                                     <div className="space-y-4">
-                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Tech Stack Matrix</label>
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Skills & Technologies</label>
                                         <div className="flex gap-2">
                                             <input
                                                 type="text"
@@ -372,7 +372,7 @@ export default function AdminDomains() {
 
                                 <div className="space-y-6 pt-6 border-t border-slate-200">
                                     <div className="flex justify-between items-center">
-                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Verification Quiz</label>
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Test Questions</label>
                                         <span className="text-[10px] font-bold text-indigo-600">{newDomain.questions.length} Questions Added</span>
                                     </div>
 
@@ -430,7 +430,7 @@ export default function AdminDomains() {
                                 </div>
 
                                 <div className="space-y-6 pt-6 border-t border-slate-200">
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Demo Mission Briefing</label>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Test Task Instructions</label>
                                     <div className="grid md:grid-cols-2 gap-8 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
                                         <div className="space-y-4">
                                             <input
@@ -480,7 +480,7 @@ export default function AdminDomains() {
 
 
                                 <div className="pt-6 border-t border-slate-200 flex justify-end">
-                                    <Button onClick={handleCreate}>Deploy Domain</Button>
+                                    <Button onClick={handleCreate}>Save Category</Button>
                                 </div>
                             </Card>
                         </motion.div>
@@ -530,7 +530,7 @@ export default function AdminDomains() {
 
                                 <div className="p-8 space-y-8 overflow-y-auto">
                                     <div className="space-y-4">
-                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Main Domain Name</label>
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Category Name</label>
                                         <input
                                             type="text"
                                             value={editingDomain.name}
@@ -540,7 +540,7 @@ export default function AdminDomains() {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tech Stacks</label>
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Skills & Technologies</label>
                                         <div className="flex gap-2">
                                             <input
                                                 type="text"
@@ -563,7 +563,7 @@ export default function AdminDomains() {
 
                                     <div className="space-y-4 pt-6 border-t border-slate-100">
                                         <div className="flex justify-between items-center">
-                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Verification Quiz</label>
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Test Questions</label>
                                             <span className="text-[10px] font-bold text-indigo-600">{(editingDomain.questions || []).length} synced</span>
                                         </div>
 
@@ -616,7 +616,7 @@ export default function AdminDomains() {
                                     </div>
 
                                     <div className="space-y-4 pt-6 border-t border-slate-100">
-                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Demo Mission Briefing</label>
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Test Task Instructions</label>
                                         <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-4">
                                             <input
                                                 type="text"

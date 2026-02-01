@@ -102,7 +102,7 @@ export default function DemoTask() {
 
   const handleSubmit = async () => {
     if (!submission.trim()) {
-      toast.error("Artifact link required for synchronization");
+      toast.error("Link required for submission");
       return;
     }
     if (!user) return;
@@ -117,10 +117,10 @@ export default function DemoTask() {
         demoTaskScore: score,
         demoTaskSubmission: submission
       });
-      toast.success("Assignment Confirmed! Score: " + score + "/100");
+      toast.success("Test Task Submitted! Score: " + score + "/100");
       setTimeout(() => router.push("/dashboard"), 1500);
     } catch (e) {
-      toast.error("Cloud synchronization failed");
+      toast.error("Submission failed");
     } finally {
       setIsSubmitting(false);
     }
@@ -159,7 +159,7 @@ export default function DemoTask() {
     // Legacy mapping
     return {
       developer: {
-        title: "Core Architecture Assessment",
+        title: "Test Task",
         icon: Terminal,
         color: "text-blue-500",
         description: "Engineer a mini CRUD application (Todo list, Memo hub, or Task engine) using React/Next.js.",
@@ -177,7 +177,7 @@ export default function DemoTask() {
         categoryName: "Video Editor"
       },
       designer: {
-        title: "Interface Synthesis",
+        title: "Test Task",
         icon: Palette,
         color: "text-purple-500",
         description: "Design a high-fidelity landing page mockup focusing on visual hierarchy.",
@@ -186,7 +186,7 @@ export default function DemoTask() {
         categoryName: "Designer"
       },
       marketing: {
-        title: "Growth Strategy Sync",
+        title: "Test Task",
         icon: BarChart,
         color: "text-emerald-500",
         description: "Formulate a multi-channel acquisition strategy for a modern SaaS product.",
@@ -195,7 +195,7 @@ export default function DemoTask() {
         categoryName: "Marketing"
       },
       writing: {
-        title: "Linguistic Strategy",
+        title: "Test Task",
         icon: PenTool,
         color: "text-amber-500",
         description: "Draft a 500-word SEO-optimized technical or product focused brief.",
@@ -204,7 +204,7 @@ export default function DemoTask() {
         categoryName: "Writing"
       },
       general: {
-        title: "Operational Proficiency",
+        title: "Test Task",
         icon: Briefcase,
         color: "text-indigo-500",
         description: "Submit a sample demonstrating project management or QA documentation.",
@@ -215,8 +215,8 @@ export default function DemoTask() {
     } as any;
   })()[category] || (dynamicContent || {
     // Absolute final fallback 
-    title: "Mission Briefing",
-    description: "Please complete the assessment task assigned to your role.",
+    title: "Test Task Instructions",
+    description: "Please complete the test task assigned to your role.",
     requirements: ["High quality output", "Timely delivery"],
     deliverable: "Project Link",
     icon: Briefcase,
@@ -229,7 +229,7 @@ export default function DemoTask() {
   return (
     <Layout>
       <Head>
-        <title>Assessment Hub - {user.fullName}</title>
+        <title>Test Task - {user.fullName}</title>
       </Head>
 
       <div className="max-w-[1400px] mx-auto pb-20 pt-10 px-6">
@@ -240,7 +240,7 @@ export default function DemoTask() {
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20">
                 <ShieldCheck size={12} className="text-indigo-600" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Verification Phase 02</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Step 2: Test Task</span>
               </div>
               <h1 className="text-5xl font-black text-slate-900 tracking-tight leading-tight uppercase">{content.title}</h1>
               <p className="text-slate-500 text-lg font-medium leading-relaxed">{content.description}</p>
@@ -253,13 +253,13 @@ export default function DemoTask() {
                   <content.icon size={36} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Target Discipline</p>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Category</p>
                   <p className="text-2xl font-black uppercase">{displayCategory}</p>
                 </div>
               </div>
 
               <div className="space-y-6">
-                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Protocol Requirements</h4>
+                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Requirements</h4>
                 <div className="grid gap-4">
                   {content.requirements.map((req, i) => (
                     <div key={i} className="flex items-center gap-4 bg-white/5 border border-white/10 p-4 rounded-2xl">
@@ -272,7 +272,7 @@ export default function DemoTask() {
 
               <div className="mt-10 pt-10 border-t border-white/5 flex items-center gap-3">
                 <LinkIcon size={18} className="text-indigo-400" />
-                <p className="text-sm font-black text-indigo-400 uppercase tracking-widest">Required Artifact: {content.deliverable}</p>
+                <p className="text-sm font-black text-indigo-400 uppercase tracking-widest">Required Link: {content.deliverable}</p>
               </div>
             </div>
 
@@ -281,8 +281,8 @@ export default function DemoTask() {
                 <Zap size={20} />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-900 uppercase tracking-widest mb-1">AI Calibration</p>
-                <p className="text-xs text-slate-500 font-medium leading-relaxed">Your submission is analyzed by our calibration engine to determine your performance tier across our global network.</p>
+                <p className="text-xs font-bold text-slate-900 uppercase tracking-widest mb-1">Quality Check</p>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">Your submission is analyzed by our review process to determine your rating across our network.</p>
               </div>
             </div>
           </motion.div>
@@ -297,14 +297,14 @@ export default function DemoTask() {
                   <div className="w-16 h-16 bg-slate-900 rounded-3xl flex items-center justify-center text-white mx-auto mb-6 shadow-xl">
                     <Send size={24} />
                   </div>
-                  <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Upload Deliverables</h3>
-                  <p className="text-slate-400 font-medium">Synchronize your mission artifacts for review.</p>
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Submit Your Work</h3>
+                  <p className="text-slate-400 font-medium">Submit your task links for review.</p>
                 </div>
 
                 <div className="space-y-6">
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
-                      Artifact Link (Public)
+                      Submission Link (Public)
                     </label>
                     <textarea
                       value={submission}
@@ -316,11 +316,11 @@ export default function DemoTask() {
 
                   <div className="p-6 bg-amber-50 rounded-[2rem] border border-amber-100 flex gap-4">
                     <AlertCircle className="text-amber-600 shrink-0" size={20} />
-                    <p className="text-xs font-bold text-amber-900 leading-relaxed uppercase tracking-tighter">Ensure your links are accessible. Private repositories or restricted documents will cause synchronization failure.</p>
+                    <p className="text-xs font-bold text-amber-900 leading-relaxed uppercase tracking-tighter">Ensure your links are accessible. Private repositories or restricted documents will cause submission failure.</p>
                   </div>
 
                   <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full h-20 rounded-[2rem] text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-indigo-600/20">
-                    {isSubmitting ? "Finalizing Sync..." : "Confirm Final Submission"}
+                    {isSubmitting ? "Submitting..." : "Confirm Submission"}
                   </Button>
                 </div>
               </div>

@@ -65,19 +65,19 @@ export default function DailySubmissionForm({ userId, onSubmit }: DailySubmissio
       const submissions = await storage.getSubmissionsByUser(userId);
       const today = getTodayDate();
       if (submissions.some(s => s.date === today)) {
-        setError('Mission log already submitted for today.');
+        setError('You have already submitted your work log for today.');
         setIsSubmitting(false);
         return;
       }
 
       if (isDevelopmentWorker && !formData.githubCommitUrl) {
-        setError('GitHub commit link is mandatory for software engineers.');
+        setError('Please provide a GitHub link. It is required for developers.');
         setIsSubmitting(false);
         return;
       }
 
       if (!formData.description || formData.hoursWorked <= 0) {
-        setError('Please provide artifacts and time consumption data.');
+        setError('Please describe your work and enter the hours worked.');
         setIsSubmitting(false);
         return;
       }
@@ -96,7 +96,7 @@ export default function DailySubmissionForm({ userId, onSubmit }: DailySubmissio
 
       await storage.createSubmission(submission);
 
-      setSuccess('Mission Log Synchronized! 🎉');
+      setSuccess('Work Log Saved! 🎉');
       setFormData({
         githubCommitUrl: '',
         videoUrl: '',
@@ -107,7 +107,7 @@ export default function DailySubmissionForm({ userId, onSubmit }: DailySubmissio
 
       setTimeout(() => onSubmit(), 1500);
     } catch (err) {
-      setError('System sync failed. Please check your connection.');
+      setError('Failed to save. Please check your internet connection.');
     } finally {
       setIsSubmitting(false);
     }
@@ -124,8 +124,8 @@ export default function DailySubmissionForm({ userId, onSubmit }: DailySubmissio
           <div className="w-16 h-16 bg-slate-900 rounded-3xl flex items-center justify-center text-white mx-auto mb-6 shadow-xl shadow-slate-900/10">
             <Send size={24} />
           </div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-3">Daily Mission Log</h2>
-          <p className="text-slate-500 font-medium">Record your progress to trigger weekly payout calculations.</p>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-3">Submit Work Log</h2>
+          <p className="text-slate-500 font-medium">Log your work every day to ensure you get paid on time.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -145,31 +145,31 @@ export default function DailySubmissionForm({ userId, onSubmit }: DailySubmissio
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-3">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Calendar size={12} className="text-indigo-600" /> Task Category
+                <Calendar size={12} className="text-indigo-600" /> Type of Work
               </label>
               <select
                 value={formData.workType}
                 onChange={(e) => setFormData({ ...formData, workType: e.target.value as any })}
                 className="w-full px-5 py-4 bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 rounded-2xl outline-none transition-all font-bold appearance-none cursor-pointer"
               >
-                <option value="development">Software Development</option>
-                <option value="design">UI/UX Design</option>
-                <option value="video-editing">Video Production</option>
-                <option value="content">Content Strategy</option>
-                <option value="other">General Operations</option>
+                <option value="development">Development</option>
+                <option value="design">Design</option>
+                <option value="video-editing">Video Editing</option>
+                <option value="content">Writing/Content</option>
+                <option value="other">Other</option>
               </select>
             </div>
 
             <div className="space-y-3">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Clock size={12} className="text-indigo-600" /> Time Consumption
+                <Clock size={12} className="text-indigo-600" /> Hours Worked
               </label>
               <input
                 type="number"
                 min="0.5"
                 max="24"
                 step="0.5"
-                placeholder="Hours invested"
+                placeholder="How many hours?"
                 value={formData.hoursWorked || ''}
                 onChange={(e) => setFormData({ ...formData, hoursWorked: parseFloat(e.target.value) || 0 })}
                 className="w-full px-5 py-4 bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 rounded-2xl outline-none transition-all font-bold"
@@ -180,7 +180,7 @@ export default function DailySubmissionForm({ userId, onSubmit }: DailySubmissio
 
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
-              <Github size={12} className="text-indigo-600" /> GitHub Repository Hub
+              <Github size={12} className="text-indigo-600" /> GitHub Link
               {isDevelopmentWorker && <span className="text-rose-500">*</span>}
             </label>
             <div className="relative group">
@@ -198,7 +198,7 @@ export default function DailySubmissionForm({ userId, onSubmit }: DailySubmissio
 
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
-              <Video size={12} className="text-indigo-600" /> Demonstration Video
+              <Video size={12} className="text-indigo-600" /> Video Link (Optional)
             </label>
             <div className="relative group">
               <input
@@ -206,19 +206,19 @@ export default function DailySubmissionForm({ userId, onSubmit }: DailySubmissio
                 value={formData.videoUrl}
                 onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
                 className="w-full px-5 py-4 bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 rounded-2xl outline-none transition-all font-bold pl-12"
-                placeholder="Loom, YouTube, or Drive link"
+                placeholder="Loom, Drive, or YouTube link"
               />
               <Video className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             </div>
           </div>
 
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Daily Synthesis</label>
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">What did you do today?</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-5 py-5 bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 rounded-2xl outline-none transition-all font-bold min-h-[150px] resize-none"
-              placeholder="What did you achieve during this sprint?"
+              placeholder="Describe the work you completed today..."
               required
             />
           </div>
@@ -229,12 +229,12 @@ export default function DailySubmissionForm({ userId, onSubmit }: DailySubmissio
               className="w-full h-16 rounded-[1.25rem] shadow-2xl shadow-indigo-600/20 text-sm uppercase tracking-[0.2em]"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Synchronizing..." : "Submit Mission Log"} <Send className="ml-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" size={18} />
+              {isSubmitting ? "Saving..." : "Save Work Log"} <Send className="ml-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" size={18} />
             </Button>
 
             <div className="flex items-center justify-center gap-2 mt-6 py-2">
               <Info size={14} className="text-slate-400" />
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Submissions are finalized upon entry and trigger audit logs.</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Once submitted, your logs will be used to calculate your weekly pay.</p>
             </div>
           </div>
         </form>

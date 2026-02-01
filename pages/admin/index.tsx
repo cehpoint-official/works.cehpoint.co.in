@@ -70,7 +70,7 @@ export default function AdminDashboard() {
         setWorkers(workersList);
         setTasks(tasksList);
       } catch (err) {
-        toast.error("Telemetry failed to sync.");
+        toast.error("Failed to load dashboard data.");
       } finally {
         setLoading(false);
       }
@@ -84,7 +84,7 @@ export default function AdminDashboard() {
       <Layout>
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
           <div className="w-12 h-12 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="font-semibold text-indigo-600 tracking-wider text-xs uppercase">Syncing Dashboard...</p>
+          <p className="font-semibold text-indigo-600 tracking-wider text-xs uppercase">Loading Dashboard...</p>
         </div>
       </Layout>
     );
@@ -99,7 +99,7 @@ export default function AdminDashboard() {
       const updatedUser = { ...user, preferredCurrency: value };
       storage.setCurrentUser(updatedUser);
       setUser(updatedUser);
-      toast.success(`Currency shifted to ${value}`);
+      toast.success(`Currency changed to ${value}`);
     } catch (err) {
       toast.error("Currency persistence failed.");
     } finally {
@@ -146,7 +146,7 @@ export default function AdminDashboard() {
   return (
     <Layout>
       <Head>
-        <title>Command Hub | Admin</title>
+        <title>Admin Dashboard | Admin</title>
       </Head>
 
       <div className="max-w-[1400px] mx-auto space-y-12 pb-20">
@@ -216,7 +216,7 @@ export default function AdminDashboard() {
 
             {workers.length === 0 ? (
               <div className="bg-gray-50 border-2 border-dashed border-gray-100 rounded-[32px] p-20 text-center">
-                <p className="text-gray-400 font-black uppercase tracking-widest text-xs">Zero Specialist Data</p>
+                <p className="text-gray-400 font-black uppercase tracking-widest text-xs">No Workers Found</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -271,7 +271,7 @@ export default function AdminDashboard() {
 
             {tasks.length === 0 ? (
               <div className="bg-gray-50 border-2 border-dashed border-gray-100 rounded-[32px] p-20 text-center">
-                <p className="text-gray-400 font-black uppercase tracking-widest text-xs">Zero Mission Logs</p>
+                <p className="text-gray-400 font-black uppercase tracking-widest text-xs">No Tasks Found</p>
               </div>
             ) : (
               <div className="space-y-4">

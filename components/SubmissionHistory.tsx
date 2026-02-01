@@ -25,7 +25,7 @@ export default function SubmissionHistory({ submissions }: Props) {
         <div className="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-slate-200">
           <Calendar className="w-8 h-8" />
         </div>
-        <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-xs">No mission logs recorded yet</p>
+        <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-xs">No work logs found.</p>
       </div>
     );
   }
@@ -59,17 +59,17 @@ export default function SubmissionHistory({ submissions }: Props) {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-black text-slate-600 uppercase tracking-widest">
                   <Clock className="w-3.5 h-3.5" />
-                  {sub.hoursWorked} Hours Logged
+                  {sub.hoursWorked} Hours Worked
                 </div>
                 {sub.adminReviewed ? (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-xl text-[10px] font-black text-emerald-600 uppercase tracking-widest">
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    Verified by Admin
+                    Verified & Approved
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-xl text-[10px] font-black text-amber-600 uppercase tracking-widest">
                     <Clock className="w-3.5 h-3.5" />
-                    Pending Review
+                    Waiting for Approval
                   </div>
                 )}
               </div>
@@ -87,7 +87,7 @@ export default function SubmissionHistory({ submissions }: Props) {
               </div>
 
               {/* LINKS */}
-              {(sub.githubCommitUrl || sub.videoUrl || sub.workUrl || sub.proofUrl) && (
+              {(sub.githubCommitUrl || sub.videoUrl) && (
                 <div className="flex flex-wrap gap-3">
                   {sub.githubCommitUrl && (
                     <a href={sub.githubCommitUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-slate-900 text-white rounded-2xl text-xs font-bold hover:bg-slate-800 hover:-translate-y-1 transition-all shadow-lg shadow-slate-900/10">
@@ -96,12 +96,7 @@ export default function SubmissionHistory({ submissions }: Props) {
                   )}
                   {sub.videoUrl && (
                     <a href={sub.videoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-rose-600 text-white rounded-2xl text-xs font-bold hover:bg-rose-700 hover:-translate-y-1 transition-all shadow-lg shadow-rose-600/10">
-                      <Video size={14} /> Proof Video
-                    </a>
-                  )}
-                  {sub.workUrl && (
-                    <a href={sub.workUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-indigo-50 text-indigo-700 rounded-2xl text-xs font-bold hover:bg-indigo-100 hover:-translate-y-1 transition-all">
-                      <LinkIcon size={14} /> Deployment
+                      <Video size={14} /> Video Proof
                     </a>
                   )}
                 </div>
@@ -123,7 +118,7 @@ export default function SubmissionHistory({ submissions }: Props) {
                       <MessageSquare size={18} />
                     </div>
                     <div>
-                      <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-3 block">Manager Feedback</span>
+                      <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-3 block">Note from Manager</span>
                       <p className="text-slate-200 text-base font-medium italic leading-relaxed">
                         &quot;{sub.adminFeedback}&quot;
                       </p>

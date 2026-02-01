@@ -169,12 +169,14 @@ import {
   createNotification as fsCreateNotification,
   listNotifications as fsListNotifications,
   markNotificationRead as fsMarkNotificationRead,
+  markAllNotificationsRead as fsMarkAllNotificationsRead,
   listDomains as fsListDomains,
   createDomain as fsCreateDomain,
   updateDomain as fsUpdateDomain,
   deleteDomain as fsDeleteDomain,
   saveChatMessage as fsSaveChatMessage,
-  getChatMessages as fsGetChatMessages
+  getChatMessages as fsGetChatMessages,
+  subscribeChatMessages as fsSubscribeChatMessages
 } from "./firestore";
 
 import { storage as firebaseStorage } from "./firebase";
@@ -325,6 +327,9 @@ export const storage = {
   async markNotificationRead(id: string): Promise<void> {
     return await fsMarkNotificationRead(id);
   },
+  async markAllNotificationsRead(userId: string): Promise<void> {
+    return await fsMarkAllNotificationsRead(userId);
+  },
 
   /* -------------------------
    * STORAGE / FILES
@@ -381,6 +386,10 @@ export const storage = {
 
   async getChatMessages(taskId: string): Promise<ChatMessage[]> {
     return await fsGetChatMessages(taskId);
+  },
+
+  subscribeChat(taskId: string, callback: (messages: ChatMessage[]) => void) {
+    return fsSubscribeChatMessages(taskId, callback);
   },
 };
 

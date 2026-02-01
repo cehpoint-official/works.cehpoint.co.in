@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from "react";
-import { io, Socket } from "socket.io-client";
 import { Send, User as UserIcon, X, Rocket, ShieldAlert } from "lucide-react";
 import { ChatMessage, User } from "../utils/types";
 import { storage } from "../utils/storage";
@@ -14,32 +13,20 @@ interface ChatProps {
 export default function Chat({ taskId, currentUser, onClose }: ChatProps) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
-    const socketRef = useRef<Socket | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // Initialize socket connection
-        fetch("/api/socket"); // Ensure socket server is initialized
-        const socket = io({
-            path: "/api/socket",
+        console.log(`[Chat] Establishing real-time link for task: ${taskId}`);
+
+        // Use native Firestore snapshots for 100% reliability
+        const unsubscribe = storage.subscribeChat(taskId, (newMessages) => {
+            console.log(`[Chat] Received ${newMessages.length} transmissions`);
+            setMessages(newMessages);
         });
-        socketRef.current = socket;
-
-        socket.emit("join-room", taskId);
-
-        socket.on("new-message", (msg: ChatMessage) => {
-            setMessages((prev) => [...prev, msg]);
-        });
-
-        // Load history from Firestore (if we had it)
-        const loadHistory = async () => {
-            const history = await storage.getChatMessages(taskId);
-            setMessages(history);
-        }
-        loadHistory();
 
         return () => {
-            socket.disconnect();
+            console.log("[Chat] Terminating secure link...");
+            unsubscribe();
         };
     }, [taskId]);
 
@@ -62,8 +49,9 @@ export default function Chat({ taskId, currentUser, onClose }: ChatProps) {
             createdAt: new Date().toISOString(),
         };
 
-        // Save to Firestore
-        const saved = await storage.saveChatMessage(message);
+        // Save to Firestore (Snapshot will update the UI automatically)
+        await storage.saveChatMessage(message);
+        setInput("");
 
         // 🔹 Notify workers if the sender is an Admin
         if (currentUser.role === "admin") {
@@ -91,10 +79,6 @@ export default function Chat({ taskId, currentUser, onClose }: ChatProps) {
                 console.error("Chat notification failed:", e);
             }
         }
-
-        // Send via socket
-        socketRef.current?.emit("send-message", saved);
-        setInput("");
     };
 
     return (

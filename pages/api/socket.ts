@@ -20,21 +20,26 @@ const socketHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
         res.socket.server.io = io;
 
         io.on("connection", (socket) => {
-            console.log("Socket connected:", socket.id);
+            console.log(`[Socket] Client connected: ${socket.id}`);
 
             socket.on("join-room", (taskId: string) => {
+                if (!taskId) return;
                 socket.join(taskId);
-                console.log(`Socket ${socket.id} joined room ${taskId}`);
+                console.log(`[Socket] Client ${socket.id} joined room: ${taskId}`);
             });
 
             socket.on("send-message", (message: any) => {
-                // In a real app, you'd save this to Firestore here
-                // For simplicity, we emit it to the room
+                if (!message || !message.taskId) return;
+                console.log(`[Socket] Message broadcast to room ${message.taskId}`);
                 io.to(message.taskId).emit("new-message", message);
             });
 
-            socket.on("disconnect", () => {
-                console.log("Socket disconnected:", socket.id);
+            socket.on("error", (err) => {
+                console.error(`[Socket] Connection error:`, err);
+            });
+
+            socket.on("disconnect", (reason) => {
+                console.log(`[Socket] Client disconnected: ${socket.id} (Reason: ${reason})`);
             });
         });
     }

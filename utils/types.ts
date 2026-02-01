@@ -205,6 +205,7 @@ export interface PayoutAccount {
   cryptoAddress?: string;
 
   // General / common
+  id: string; // Unique ID for each saved account
   accountNumber: string; // same as UPI, bank account, paypal email, or crypto address
 }
 
@@ -236,6 +237,7 @@ export interface User {
   demoTaskSubmission?: string;
 
   payoutAccount?: PayoutAccount;
+  payoutAccounts?: PayoutAccount[];
 
   emailVerified: boolean;
 

@@ -149,7 +149,7 @@ export default function DemoSetup() {
         storage.setCurrentUser(freshUser);
       }
     } catch (err) {
-      console.error("Domain isolation failed", err);
+      console.error("Failed to load categories", err);
     } finally {
       setLoading(false);
     }
@@ -176,7 +176,7 @@ export default function DemoSetup() {
   return (
     <Layout>
       <Head>
-        <title>Setup Your Profile - Cehpoint</title>
+        <title>Account Setup - Cehpoint</title>
       </Head>
 
       <div className="relative min-h-[90vh]">
@@ -205,7 +205,7 @@ export default function DemoSetup() {
                 transition={{ delay: 0.1 }}
                 className="text-slate-500 text-lg font-medium leading-relaxed"
               >
-                Confirm your primary expertise and add any additional skills. This helps us find the perfect missions for you.
+                Confirm your primary expertise and add any additional skills. This helps us find the perfect tasks for you.
               </motion.p>
             </div>
           </section>
@@ -245,7 +245,7 @@ export default function DemoSetup() {
                         </div>
 
                         <p className="text-slate-600 text-lg font-medium">
-                          You&apos;ve selected {option.name.toLowerCase()} as your primary domain. You will receive an assessment task tailored to this track.
+                          You&apos;ve selected {option.name.toLowerCase()} as your primary skill. You will receive a test task tailored to this track.
                         </p>
 
                         <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-2">
@@ -273,7 +273,7 @@ export default function DemoSetup() {
             <div className="bg-white p-8 md:p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 space-y-8">
               <div className="space-y-4">
                 <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] ml-2 flex items-center gap-2">
-                  <Search size={14} className="text-indigo-600" /> Additional Expertise
+                  <Search size={14} className="text-indigo-600" /> Other Skills
                 </label>
                 <div className="relative group">
                   <input
@@ -292,11 +292,11 @@ export default function DemoSetup() {
                   onClick={handleSubmit}
                   className="group w-full h-20 rounded-[2rem] bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-indigo-600/30 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
                 >
-                  <span>Begin Task Phase</span>
+                  <span>Proceed to Test Task</span>
                   <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                 </button>
                 <p className="text-center text-slate-400 text-xs font-medium">
-                  Verified your skills? Click to proceed to the briefing.
+                  Verified your skills? Click to proceed to the instructions.
                 </p>
               </div>
             </div>

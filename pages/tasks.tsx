@@ -142,7 +142,7 @@ export default function Tasks() {
       });
       setTasks(myTasks);
     } catch (e) {
-      toast.error("Cloud sync failed");
+      toast.error("Failed to load tasks");
     } finally {
       setLoading(false);
     }
@@ -164,10 +164,10 @@ export default function Tasks() {
         assignedWorkerIds: task.assignedWorkerIds?.length ? task.assignedWorkerIds : [user.id],
         assignedAt: task.assignedAt || new Date().toISOString(),
       });
-      toast.success("Deployment Confirmed!");
+      toast.success("Task Accepted!");
       loadTasks(user.id);
     } catch (err) {
-      toast.error("Communication error.");
+      toast.error("Failed to accept task.");
     }
   };
 
@@ -197,7 +197,7 @@ export default function Tasks() {
         declinedBy: newDeclinedBy,
         candidateWorkerIds: task.candidateWorkerIds?.filter(id => id !== user.id)
       });
-      toast.success("Task archived.");
+      toast.success("Task removed.");
       loadTasks(user.id);
     } catch (err) {
       toast.error("Operation failed.");
@@ -221,11 +221,11 @@ export default function Tasks() {
         progress: progressModal.currentProgress,
         checklist: progressModal.checklist
       });
-      toast.success("Progress Synchronized");
+      toast.success("Progress Updated");
       setProgressModal({ visible: false, taskId: null, currentProgress: 0, checklist: [] });
       if (user) loadTasks(user.id);
     } catch (err) {
-      toast.error("Cloud update failed");
+      toast.error("Failed to update");
     } finally {
       setSubmitting(false);
     }
@@ -253,12 +253,12 @@ export default function Tasks() {
         link: "/admin/tasks"
       });
 
-      toast.success("Withdrawal request dispatched to headquarters.");
+      toast.success("Resignation request sent.");
       setResignationModal({ visible: false, taskId: null });
       setResignationReason("");
       if (user) loadTasks(user.id);
     } catch (e) {
-      toast.error("Dispatch failed.");
+      toast.error("Failed to send request.");
     } finally {
       setRequestingResignation(false);
     }
@@ -349,7 +349,7 @@ ${submitForm.docUrl ? `**Docs:** ${submitForm.docUrl}` : ""}
   return (
     <Layout>
       <Head>
-        <title>Mission Control - Tasks</title>
+        <title>My Tasks - Cehpoint</title>
       </Head>
 
       <div className="max-w-[1400px] mx-auto space-y-8 pb-20">
@@ -357,7 +357,7 @@ ${submitForm.docUrl ? `**Docs:** ${submitForm.docUrl}` : ""}
         <section className="bg-white border border-slate-100 rounded-[2.5rem] p-8 md:p-12 shadow-sm">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
             <div className="space-y-2">
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">Active Assignments</h1>
+              <h1 className="text-4xl font-black text-slate-900 tracking-tight">Current Tasks</h1>
               <p className="text-slate-500 font-medium">Manage your active projects and explore new opportunities.</p>
             </div>
 
@@ -448,7 +448,7 @@ ${submitForm.docUrl ? `**Docs:** ${submitForm.docUrl}` : ""}
                       {/* Links and Skills */}
                       <div className="space-y-4">
                         <div className="flex flex-wrap gap-2">
-                          {task.skills?.map(skill => (
+                          {Array.isArray(task.skills) && task.skills.map(skill => (
                             <span key={skill} className="px-3 py-1 bg-slate-50 border border-slate-100 text-[10px] font-bold text-slate-600 rounded-lg uppercase tracking-wider">{skill}</span>
                           ))}
                         </div>
@@ -487,16 +487,16 @@ ${submitForm.docUrl ? `**Docs:** ${submitForm.docUrl}` : ""}
                     <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex gap-3">
                       {task.status === "available" && (
                         <>
-                          <Button onClick={() => handleAcceptTask(task.id)} className="flex-1 h-12 rounded-xl text-[10px] uppercase font-black tracking-widest">Accept Seat</Button>
-                          <Button onClick={() => handleDeclineTask(task.id)} variant="outline" className="h-12 border-rose-100 text-rose-600 hover:bg-rose-50 rounded-xl">Archieve</Button>
+                          <Button onClick={() => handleAcceptTask(task.id)} className="flex-1 h-12 rounded-xl text-[10px] uppercase font-black tracking-widest">Accept Task</Button>
+                          <Button onClick={() => handleDeclineTask(task.id)} variant="outline" className="h-12 border-rose-100 text-rose-600 hover:bg-rose-50 rounded-xl">Decline</Button>
                         </>
                       )}
                       {task.status === "in-progress" && (
                         <>
                           {!task.resignationRequested ? (
                             <>
-                              <Button onClick={() => openSubmitModal(task.id)} className="flex-1 h-12 rounded-xl text-[10px] uppercase font-black tracking-widest">Final Submit</Button>
-                              <Button onClick={() => openProgressModal(task)} variant="outline" className="h-12 border-indigo-100 text-indigo-600 hover:bg-indigo-50 rounded-xl">Progress Sync</Button>
+                              <Button onClick={() => openSubmitModal(task.id)} className="flex-1 h-12 rounded-xl text-[10px] uppercase font-black tracking-widest">Submit Work</Button>
+                              <Button onClick={() => openProgressModal(task)} variant="outline" className="h-12 border-indigo-100 text-indigo-600 hover:bg-indigo-50 rounded-xl">Update Progress</Button>
                               <Button
                                 onClick={() => setResignationModal({ visible: true, taskId: task.id })}
                                 variant="outline"
@@ -522,7 +522,7 @@ ${submitForm.docUrl ? `**Docs:** ${submitForm.docUrl}` : ""}
                       )}
                       {task.status === "completed" && (
                         <div className="w-full flex items-center justify-center gap-2 py-4 text-[10px] font-black uppercase text-emerald-600 tracking-widest">
-                          <CheckCircle2 size={16} /> Mission Success
+                          <CheckCircle2 size={16} /> Task Completed
                         </div>
                       )}
                     </div>
@@ -546,8 +546,8 @@ ${submitForm.docUrl ? `**Docs:** ${submitForm.docUrl}` : ""}
                     <Rocket size={24} />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">Project Handover</h3>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Upload your mission artifacts</p>
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">Submit Your Work</h3>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Provide the final details of your work</p>
                   </div>
                 </div>
                 <button onClick={() => setSubmissionModal({ visible: false, taskId: null })} className="p-2 hover:bg-white rounded-xl transition-colors">
@@ -590,7 +590,7 @@ ${submitForm.docUrl ? `**Docs:** ${submitForm.docUrl}` : ""}
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Mission Synthesis</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Work Summary</label>
                   <textarea value={submitForm.notes} onChange={(e) => setSubmitForm({ ...submitForm, notes: e.target.value })} className="w-full px-5 py-5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:bg-white focus:border-indigo-600 transition-all font-bold min-h-[120px] resize-none" placeholder="Final summary of features and deliverables..." />
                 </div>
               </div>
@@ -598,7 +598,7 @@ ${submitForm.docUrl ? `**Docs:** ${submitForm.docUrl}` : ""}
               <div className="p-8 md:p-10 bg-slate-50/50 border-t border-slate-100 flex gap-4">
                 <Button variant="outline" onClick={() => setSubmissionModal({ visible: false, taskId: null })} className="h-14 px-8 rounded-2xl font-bold uppercase tracking-widest text-xs">Retort</Button>
                 <Button onClick={handleConfirmSubmit} disabled={submitting} className="flex-1 h-14 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-indigo-600/20">
-                  {submitting ? "Processing..." : "Initiate Final Handover"}
+                  {submitting ? "Submitting..." : "Submit Now"}
                 </Button>
               </div>
             </motion.div>
@@ -618,7 +618,7 @@ ${submitForm.docUrl ? `**Docs:** ${submitForm.docUrl}` : ""}
                     <Target size={24} />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">Mission Sync</h3>
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">Progress Update</h3>
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Target: {progressModal.currentProgress}% Ready</p>
                   </div>
                 </div>
@@ -628,7 +628,7 @@ ${submitForm.docUrl ? `**Docs:** ${submitForm.docUrl}` : ""}
                 {/* Visual Progress */}
                 <div className="space-y-6">
                   <div className="flex justify-between items-end">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-black">Velocity Indicator</p>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-black">Current Progress</p>
                     <p className="text-4xl font-black text-indigo-600">{progressModal.currentProgress}<span className="text-lg opacity-20">%</span></p>
                   </div>
                   <div className="relative h-4 bg-slate-100 rounded-full overflow-hidden">
@@ -672,7 +672,7 @@ ${submitForm.docUrl ? `**Docs:** ${submitForm.docUrl}` : ""}
               <div className="p-8 md:p-10 bg-slate-50/50 border-t border-slate-100 flex gap-4">
                 <Button variant="outline" onClick={() => setProgressModal({ ...progressModal, visible: false })} className="h-14 px-8 rounded-2xl">Retreat</Button>
                 <Button onClick={handleSaveProgress} disabled={submitting} className="flex-1 h-14 rounded-2xl font-black uppercase tracking-[0.2em] text-xs">
-                  {submitting ? "Syncing..." : "Finalize Progress Hub"}
+                  {submitting ? "Saving..." : "Save Progress"}
                 </Button>
               </div>
             </motion.div>

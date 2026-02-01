@@ -12,6 +12,7 @@ import {
   orderBy,
   updateDoc,
   deleteDoc,
+  onSnapshot
 } from "firebase/firestore";
 import type { User, Task, DailySubmission, Domain } from "./types";
 
@@ -281,8 +282,20 @@ export async function listNotifications(userId: string) {
     const q = query(notificationsCol, where("userId", "==", userId), orderBy("createdAt", "desc"));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...(d.data() as Notification) })) as Notification[];
-  } catch (err) {
-    console.warn("[Firestore] listNotifications permission denied or index missing:", err);
+  } catch (err: any) {
+    if (err.message?.includes("index")) {
+      console.warn("[Firestore] listNotifications: Missing index, falling back to unsorted fetch.");
+      try {
+        const qSimple = query(notificationsCol, where("userId", "==", userId));
+        const snap = await getDocs(qSimple);
+        return snap.docs
+          .map(d => ({ id: d.id, ...(d.data() as Notification) }))
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) as Notification[];
+      } catch (innerErr) {
+        console.error("[Firestore] listNotifications fallback failed:", innerErr);
+      }
+    }
+    console.warn("[Firestore] listNotifications error:", err);
     return [];
   }
 }
@@ -293,6 +306,17 @@ export async function markNotificationRead(id: string) {
     await updateDoc(ref, { read: true });
   } catch (err) {
     console.error("[Firestore] markNotificationRead error:", err);
+  }
+}
+
+export async function markAllNotificationsRead(userId: string) {
+  try {
+    const q = query(notificationsCol, where("userId", "==", userId), where("read", "==", false));
+    const snap = await getDocs(q);
+    const promises = snap.docs.map(d => updateDoc(doc(db, "notifications", d.id), { read: true }));
+    await Promise.all(promises);
+  } catch (err) {
+    console.error("[Firestore] markAllNotificationsRead error:", err);
   }
 }
 
@@ -319,5 +343,23 @@ export async function getChatMessages(taskId: string) {
     return snap.docs.map(d => ({ id: d.id, ...(d.data() as ChatMessage) }))
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) as ChatMessage[];
   }
+}
+
+export function subscribeChatMessages(taskId: string, callback: (messages: ChatMessage[]) => void) {
+  const q = query(chatCol, where("taskId", "==", taskId), orderBy("createdAt", "asc"));
+
+  return onSnapshot(q, (snap) => {
+    const messages = snap.docs.map(d => ({ id: d.id, ...(d.data() as ChatMessage) }));
+    callback(messages);
+  }, (err) => {
+    console.warn("[Firestore] Chat subscription error:", err);
+    // Fallback if index missing
+    const qSimple = query(chatCol, where("taskId", "==", taskId));
+    return onSnapshot(qSimple, (snap) => {
+      const messages = snap.docs.map(d => ({ id: d.id, ...(d.data() as ChatMessage) }))
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      callback(messages as ChatMessage[]);
+    });
+  });
 }
 

@@ -395,7 +395,7 @@ export default function AdminTasks() {
         await Promise.all(finalPayload.assignedWorkerIds.map((uid: string) =>
           storage.createNotification({
             userId: uid,
-            title: "New Mission Assigned",
+            title: "New Task Assigned",
             message: `You've been selected for "${finalPayload.title}". Check your dashboard to begin.`,
             type: "success",
             read: false,
@@ -707,7 +707,7 @@ export default function AdminTasks() {
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    if (confirm("Are you sure you want to delete this mission?")) {
+    if (confirm("Are you sure you want to delete this task?")) {
       performDelete(taskId);
     }
   };
@@ -775,7 +775,7 @@ export default function AdminTasks() {
           <Card className="animate-in fade-in slide-in-from-top-4 duration-300 border border-gray-100 bg-gray-50/50 p-8 rounded-[24px]">
             <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-gray-900">
               <Rocket className="text-indigo-600" size={24} />
-              Create New Mission
+              Create New Task
             </h3>
             <div className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
@@ -806,7 +806,7 @@ export default function AdminTasks() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Briefing / Description</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Description</label>
                 <textarea
                   value={newTask.description}
                   onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
@@ -883,7 +883,7 @@ export default function AdminTasks() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Skill Matrix Selection</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Select Required Skills</label>
                 <div className="flex flex-wrap gap-2">
                   {availableSkills
                     .filter(skill => {
@@ -922,7 +922,7 @@ export default function AdminTasks() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider items-center flex gap-2">
-                    <UserIcon size={14} className="text-indigo-600" /> Manually Assign Specialists <span className="text-[10px] text-gray-400 font-normal normal-case italic">(Optional)</span>
+                    <UserIcon size={14} className="text-indigo-600" /> Manually Assign Workers <span className="text-[10px] text-gray-400 font-normal normal-case italic">(Optional)</span>
                   </label>
                   {newTask.assignedWorkerIds.length > 0 && (
                     <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg animate-in zoom-in duration-300">
@@ -937,7 +937,7 @@ export default function AdminTasks() {
                     type="text"
                     value={workerSearch}
                     onChange={(e) => setWorkerSearch(e.target.value)}
-                    placeholder="Search specialists by domain or expertise (e.g. SEO, Developer)..."
+                    placeholder="Search workers by category or expertise (e.g. SEO, Developer)..."
                     className="w-full h-12 pl-12 pr-4 bg-white border border-gray-100 rounded-2xl outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 transition-all font-medium text-sm shadow-sm"
                   />
                   {workerSearch && (
@@ -1003,7 +1003,7 @@ export default function AdminTasks() {
                   ).length === 0 && (
                       <div className="w-full text-center py-8">
                         <UserIcon className="mx-auto text-gray-200 mb-2" size={32} />
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">No matching specialists</p>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">No matching workers</p>
                       </div>
                     )}
                 </div>
@@ -1057,7 +1057,7 @@ export default function AdminTasks() {
               )}
 
               <div className="flex gap-3 pt-4 border-t border-gray-200/50">
-                <Button onClick={handleCreateTask} disabled={busy} className="px-8 h-11">Broadcast Project</Button>
+                <Button onClick={handleCreateTask} disabled={busy} className="px-8 h-11">Post Task</Button>
                 <Button variant="outline" onClick={() => setShowCreate(false)} disabled={busy} className="h-11">Cancel</Button>
               </div>
             </div>
@@ -1068,7 +1068,7 @@ export default function AdminTasks() {
           {tasks.length === 0 && (
             <div className="text-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
               <ClipboardList className="mx-auto text-gray-300 mb-4" size={48} />
-              <p className="text-gray-500 font-bold uppercase tracking-widest">No active projection data</p>
+              <p className="text-gray-500 font-bold uppercase tracking-widest">No active tasks</p>
             </div>
           )}
 
@@ -1121,10 +1121,10 @@ export default function AdminTasks() {
                         <UserIcon className="text-gray-400" size={16} />
                       </div>
                       <div className="text-[11px]">
-                        <p className="text-gray-400 font-bold uppercase tracking-wider mb-0.5">Specialists</p>
+                        <p className="text-gray-400 font-bold uppercase tracking-wider mb-0.5">Workers</p>
                         <p className="text-gray-900 font-bold whitespace-nowrap leading-none mb-1 text-sm">
                           {assignedWorkers.length > 0 ? (
-                            assignedWorkers.length === 1 ? assignedWorkers[0].fullName : `${assignedWorkers.length} Specialists`
+                            assignedWorkers.length === 1 ? assignedWorkers[0].fullName : `${assignedWorkers.length} Workers`
                           ) : 'Recruiting'}
                         </p>
                         {assignedWorkers.length === 1 && (
@@ -1165,7 +1165,7 @@ export default function AdminTasks() {
                       <div className="flex flex-col gap-8">
                         <section>
                           <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                            <ClipboardList size={14} className="text-indigo-600" /> PROJECT BRIEF
+                            <ClipboardList size={14} className="text-indigo-600" /> PROJECT DESCRIPTION
                           </h4>
                           <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap bg-gray-50 p-6 rounded-2xl border border-gray-100">
                             {task.description}
@@ -1181,9 +1181,9 @@ export default function AdminTasks() {
                               <div className="flex items-center gap-4 text-rose-600">
                                 <AlertTriangle size={24} />
                                 <div>
-                                  <h4 className="text-lg font-black uppercase tracking-tight">Withdrawal Request Dispatched</h4>
+                                  <h4 className="text-lg font-black uppercase tracking-tight">Withdrawal Request Received</h4>
                                   <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest leading-none">
-                                    BY: {workers.find(w => w.id === (task.resignationWorkerId || task.assignedTo))?.fullName || "Unknown Specialist"}
+                                    BY: {workers.find(w => w.id === (task.resignationWorkerId || task.assignedTo))?.fullName || "Unknown Worker"}
                                   </p>
                                 </div>
                               </div>
@@ -1282,7 +1282,7 @@ export default function AdminTasks() {
 
                       <div className="flex flex-col gap-8">
                         <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100 shadow-inner">
-                          <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">PROJECT STEWARDS</h4>
+                          <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">PROJECT MANAGERS</h4>
                           {(task.status === "available" || assignedWorkers.length === 0) ? (
                             <div className="space-y-4">
                               <select
@@ -1290,7 +1290,7 @@ export default function AdminTasks() {
                                 onChange={(e) => handleAssignTask(task.id, e.target.value)}
                                 className="w-full px-5 py-4 bg-white border-2 border-gray-200 rounded-2xl font-black text-sm text-gray-900 focus:ring-8 focus:ring-indigo-50 transition-all outline-none appearance-none cursor-pointer"
                               >
-                                <option value="">MANUAL OVERRIDE...</option>
+                                <option value="">SELECT WORKER MANUALLY...</option>
                                 {workers.map((w) => (
                                   <option key={w.id} value={w.id}>
                                     {w.fullName} — {(w.primaryDomain || (w.skills?.[0] || "Specialist")).toUpperCase()}
@@ -1327,7 +1327,7 @@ export default function AdminTasks() {
                                       reason: ""
                                     })}
                                     className="w-10 h-10 flex items-center justify-center bg-gray-50 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 border border-gray-200 rounded-2xl transition-all shadow-sm hover:shadow-lg hover:-translate-y-0.5 active:scale-95 group/term shrink-0"
-                                    title="Terminate Specialist"
+                                    title="Remove Worker"
                                   >
                                     <UserMinus size={18} className="group-hover/term:rotate-6 transition-transform" />
                                   </button>
@@ -1341,7 +1341,7 @@ export default function AdminTasks() {
                                   onChange={(e) => handleAssignTask(task.id, e.target.value)}
                                   className="w-full px-5 py-3 bg-white border-2 border-slate-100 rounded-xl font-bold text-xs text-slate-600 focus:border-indigo-600 transition-all outline-none appearance-none cursor-pointer"
                                 >
-                                  <option value="">SELECT SPECIALIST...</option>
+                                  <option value="">SELECT WORKER...</option>
                                   {workers
                                     .filter(w => !task.assignedWorkerIds?.includes(w.id))
                                     .map((w) => {
@@ -1393,7 +1393,7 @@ export default function AdminTasks() {
                             onClick={() => handleDeleteTask(task.id)}
                             className="w-full border-2 border-red-50 text-red-500 hover:bg-red-50 font-black tracking-widest uppercase text-[10px] py-5 rounded-2xl"
                           >
-                            DELETE MISSION
+                            DELETE TASK
                           </Button>
                         </div>
                       </div>
@@ -1413,7 +1413,7 @@ export default function AdminTasks() {
           <div className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-[40px] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
               <div className="p-8 border-b flex justify-between items-center">
-                <h3 className="text-2xl font-black">Assignment Engine</h3>
+                <h3 className="text-2xl font-black">Task Assignment</h3>
                 <button onClick={() => setAssignmentModal({ ...assignmentModal, visible: false })} className="text-gray-400">✕</button>
               </div>
               <div className="p-8 overflow-y-auto flex-1">
@@ -1422,7 +1422,7 @@ export default function AdminTasks() {
                 <div className="space-y-4">
                   {assignmentModal.bestWorker && (
                     <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
-                      <p className="text-xs font-bold text-indigo-400 uppercase mb-1">Recommended Specialist</p>
+                      <p className="text-xs font-bold text-indigo-400 uppercase mb-1">Recommended Worker</p>
                       <p className="font-bold text-indigo-900">{assignmentModal.bestWorker.fullName}</p>
                     </div>
                   )}
@@ -1448,11 +1448,11 @@ export default function AdminTasks() {
                 <div className="flex justify-between items-center text-red-600">
                   <div className="flex items-center gap-2">
                     <AlertTriangle size={20} />
-                    <h3 className="text-xl font-black uppercase tracking-tight">Revoke Access</h3>
+                    <h3 className="text-xl font-black uppercase tracking-tight">Remove Worker</h3>
                   </div>
                   <button onClick={() => setTerminationModal({ ...terminationModal, visible: false })} className="text-gray-400 hover:text-gray-600">✕</button>
                 </div>
-                <p className="text-xs font-bold text-red-400 uppercase tracking-widest leading-none">Terminating {terminationModal.workerName}</p>
+                <p className="text-xs font-bold text-red-400 uppercase tracking-widest leading-none">Removing {terminationModal.workerName}</p>
               </div>
               <div className="p-8 space-y-6">
                 <div className="space-y-3">
@@ -1461,19 +1461,19 @@ export default function AdminTasks() {
                     value={terminationModal.reason}
                     onChange={(e) => setTerminationModal({ ...terminationModal, reason: e.target.value })}
                     className="w-full p-5 bg-gray-50 border-2 border-transparent focus:border-red-100 focus:bg-white rounded-3xl outline-none transition-all text-sm font-medium min-h-[120px]"
-                    placeholder="Specify the violation or reason for early project termination..."
+                    placeholder="Specify the reason for removal..."
                   />
                 </div>
                 <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex items-start gap-4">
                   <ShieldAlert className="text-red-500 shrink-0" size={18} />
                   <p className="text-[11px] text-red-700 font-bold leading-tight">
-                    This action will immediately remove the specialist from the project and notify them of the termination reason.
+                    This action will immediately remove the worker from the project and notify them.
                   </p>
                 </div>
               </div>
               <div className="p-8 border-t bg-gray-50 flex justify-end gap-3">
                 <Button variant="outline" onClick={() => setTerminationModal({ ...terminationModal, visible: false })} className="h-12 px-6 rounded-xl font-bold">Discard</Button>
-                <Button onClick={confirmTerminateWorker} className="h-12 px-8 bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-100 rounded-xl font-black uppercase tracking-widest text-[10px]">Execute Termination</Button>
+                <Button onClick={confirmTerminateWorker} className="h-12 px-8 bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-100 rounded-xl font-black uppercase tracking-widest text-[10px]">Confirm Removal</Button>
               </div>
             </div>
           </div>

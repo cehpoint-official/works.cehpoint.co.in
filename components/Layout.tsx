@@ -19,7 +19,8 @@ import {
   ShieldCheck,
   ChevronDown,
   LifeBuoy,
-  Layers
+  Layers,
+  Clock
 } from "lucide-react";
 
 import { storage } from "../utils/storage";
@@ -39,6 +40,7 @@ export default function Layout({ children }: LayoutProps) {
   const prevUnreadCount = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const isFirstLoad = useRef(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -52,15 +54,15 @@ export default function Layout({ children }: LayoutProps) {
     audioRef.current = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
   }, []);
 
-  const loadNotifications = async () => {
+  const loadNotifications = async (isInitial = false) => {
     if (user) {
       try {
         const list = await storage.getNotifications(user.id);
         const sorted = list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         const newUnreadCount = sorted.filter(n => !n.read).length;
 
-        // 🔹 Play sound if unread count increases
-        if (newUnreadCount > prevUnreadCount.current) {
+        // 🔹 Play sound only if unread count increases AND it's not the initial load or a route change
+        if (!isInitial && !isFirstLoad.current && newUnreadCount > prevUnreadCount.current) {
           audioRef.current?.play().catch(() => {
             // Browser might block auto-play until user interaction
           });
@@ -69,37 +71,46 @@ export default function Layout({ children }: LayoutProps) {
         setNotifications(sorted);
         setUnreadCount(newUnreadCount);
         prevUnreadCount.current = newUnreadCount;
+        if (isInitial) isFirstLoad.current = false;
       } catch (e) { }
     }
   };
 
   useEffect(() => {
-    loadNotifications();
-    const interval = setInterval(loadNotifications, 30000); // 🔹 Faster polling (30s)
+    loadNotifications(true); // Mark as initial load to prevent sound
+    const interval = setInterval(() => loadNotifications(false), 30000);
 
+    return () => clearInterval(interval);
+  }, [user]); // Removed router.pathname to prevent sound on every toggle
+
+  useEffect(() => {
+    if (notificationsOpen && user && unreadCount > 0) {
+      const autoMarkRead = async () => {
+        try {
+          await storage.markAllNotificationsRead(user.id);
+          setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+          setUnreadCount(0);
+          prevUnreadCount.current = 0;
+        } catch (e) { }
+      };
+      autoMarkRead();
+    }
+  }, [notificationsOpen, user, unreadCount]);
+
+  useEffect(() => {
     // Auto-redirect if user logs out or session expires
     if (!userLoading && !user && !['/login', '/signup', '/', '/demo-task'].includes(router.pathname)) {
       router.push('/login');
     }
-
-    return () => clearInterval(interval);
   }, [user, userLoading, router.pathname]);
 
-  const handleMarkRead = async (id: string) => {
-    try {
-      await storage.markNotificationRead(id);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-      const nextUnread = Math.max(0, unreadCount - 1);
-      setUnreadCount(nextUnread);
-      prevUnreadCount.current = nextUnread;
-    } catch (e) { }
-  };
+
 
   if (userLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
         <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Calibrating Hub...</p>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading Dashboard...</p>
       </div>
     );
   }
@@ -110,16 +121,18 @@ export default function Layout({ children }: LayoutProps) {
 
   const navLinks = isAdmin
     ? [
-      { href: "/admin", label: "Intelligence", icon: Home },
-      { href: "/admin/workers", label: "Assests", icon: Users },
-      { href: "/admin/daily-work", label: "Ledger", icon: Calendar },
-      { href: "/admin/tasks", label: "Operations", icon: Briefcase },
-      { href: "/admin/domains", label: "Protocols", icon: Layers }
+      { href: "/admin", label: "Dashboard", icon: Home },
+      { href: "/admin/workers", label: "Workers", icon: Users },
+      { href: "/admin/daily-work", label: "Work Logs", icon: Calendar },
+      { href: "/admin/tasks", label: "Tasks", icon: Briefcase },
+      { href: "/admin/payments", label: "Payments", icon: Wallet },
+      { href: "/admin/domains", label: "Categories", icon: Layers }
     ]
     : [
-      { href: "/dashboard", label: "Command", icon: Home },
-      { href: "/tasks", label: "Missions", icon: Briefcase },
-      { href: "/payments", label: "Vault", icon: Wallet }
+      { href: "/dashboard", label: "Dashboard", icon: Home },
+      { href: "/work-logs", label: "Work Logs", icon: Calendar },
+      { href: "/tasks", label: "Tasks", icon: Briefcase },
+      { href: "/payments", label: "Payments", icon: Wallet }
     ];
 
   return (
@@ -157,49 +170,48 @@ export default function Layout({ children }: LayoutProps) {
             {/* ACTIONS */}
             <div className="flex items-center gap-4">
 
-              <div className="relative">
-                <button
-                  onClick={() => setNotificationsOpen(!notificationsOpen)}
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${unreadCount > 0 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'bg-white border border-slate-100 text-slate-400 hover:text-slate-900'
-                    }`}
-                >
-                  <Bell size={18} />
-                  {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full border-2 border-white text-[9px] font-black flex items-center justify-center">{unreadCount}</span>}
-                </button>
+              {!isAdmin && (
+                <div className="relative">
+                  <button
+                    onClick={() => setNotificationsOpen(!notificationsOpen)}
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${unreadCount > 0 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'bg-white border border-slate-100 text-slate-400 hover:text-slate-900'
+                      }`}
+                  >
+                    <Bell size={18} />
+                    {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full border-2 border-white text-[9px] font-black flex items-center justify-center">{unreadCount}</span>}
+                  </button>
 
-                <AnimatePresence>
-                  {notificationsOpen && (
-                    <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute top-full right-0 mt-4 w-96 bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden z-[110]">
-                      <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Signal Stream</h3>
-                        <button onClick={() => setNotificationsOpen(false)}><X size={16} className="text-slate-300 hover:text-slate-600" /></button>
-                      </div>
-                      <div className="max-h-[450px] overflow-y-auto p-4 space-y-2">
-                        {notifications.length === 0 ? (
-                          <div className="py-20 text-center opacity-20">
-                            <ShieldCheck size={48} className="mx-auto mb-4" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Network Clear</p>
-                          </div>
-                        ) : (
-                          notifications.map(n => (
-                            <div key={n.id} className={`p-5 rounded-3xl transition-all border ${!n.read ? 'bg-indigo-50/50 border-indigo-100' : 'bg-slate-50 border-transparent hover:border-slate-100'}`}>
-                              <div className="flex justify-between items-start gap-4">
-                                <div className="space-y-1">
-                                  <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{n.title}</p>
-                                  <p className="text-xs text-slate-500 font-medium leading-relaxed">{n.message}</p>
-                                </div>
-                                {!n.read && (
-                                  <button onClick={() => handleMarkRead(n.id)} className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100"><Check size={14} /></button>
-                                )}
-                              </div>
+                  <AnimatePresence>
+                    {notificationsOpen && (
+                      <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute top-full right-0 mt-4 w-96 bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden z-[110]">
+                        <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+                          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Notifications</h3>
+                          <button onClick={() => setNotificationsOpen(false)}><X size={16} className="text-slate-300 hover:text-slate-600" /></button>
+                        </div>
+                        <div className="max-h-[450px] overflow-y-auto p-4 space-y-2">
+                          {notifications.length === 0 ? (
+                            <div className="py-20 text-center opacity-20">
+                              <ShieldCheck size={48} className="mx-auto mb-4" />
+                              <p className="text-[10px] font-black uppercase tracking-widest">No notifications</p>
                             </div>
-                          ))
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                          ) : (
+                            notifications.map(n => (
+                              <div key={n.id} className={`p-5 rounded-3xl transition-all border ${!n.read ? 'bg-indigo-50/50 border-indigo-100' : 'bg-slate-50 border-transparent hover:border-slate-100'}`}>
+                                <div className="flex justify-between items-start gap-4">
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{n.title}</p>
+                                    <p className="text-xs text-slate-500 font-medium leading-relaxed">{n.message}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
 
               <div className="h-8 w-px bg-slate-200 mx-1 hidden sm:block" />
 
@@ -238,7 +250,7 @@ export default function Layout({ children }: LayoutProps) {
                 ))}
                 <div className="h-px bg-slate-100 my-2" />
                 <button onClick={() => { logout(); setMenuOpen(false); }} className="w-full flex items-center gap-4 p-5 bg-rose-50 text-rose-600 rounded-[1.5rem] font-black uppercase tracking-widest text-xs">
-                  <LogOut size={18} /> Terminate Session
+                  <LogOut size={18} /> Log Out
                 </button>
               </div>
             </motion.div>
@@ -254,7 +266,7 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Footer Meta */}
       <footer className="py-10 border-t border-slate-50 text-center">
-        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">Cehpoint Integrated Workspace Protocol &copy; {new Date().getFullYear()}</p>
+        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">Cehpoint Work &copy; {new Date().getFullYear()}</p>
       </footer>
     </div>
   );
