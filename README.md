@@ -1,26 +1,54 @@
-# 🌐 Cehpoint Work: Immersive Specialist Platform
+<div align="center">
+  <img src="./public/hero-banner.png" alt="Cehpoint Work Banner" width="100%" />
 
-Welcome to the **Cehpoint Work** Command Center. This is a high-fidelity, production-grade ecosystem designed for elite specialists to manage missions, track professional growth, and secure transparent payouts.
+  # 🌐 Cehpoint Work: Immersive Specialist Platform
+  **Elite Execution Hub for the Top 1% of Global Talent**
+
+  [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+  [![Firebase](https://img.shields.io/badge/Firebase-11-FFCA28?style=for-the-badge&logo=firebase)](https://firebase.google.com/)
+  [![Framer Motion](https://img.shields.io/badge/Framer_Motion-11-ff0055?style=for-the-badge&logo=framer)](https://www.framer.com/motion/)
+
+  ---
+  
+  *Contributed by* **Sartak Roy**
+</div>
+
+---
+
+## 🚀 Overview
+
+Welcome to the **Cehpoint Work** Command Center. This is a high-fidelity, production-grade ecosystem designed for elite specialists to manage missions, track professional growth, and secure transparent payouts. Built with a "Interaction First" philosophy, it offers a seamless blend of performance and aesthetics.
+
+## ✨ Key Features
+
+- **🎯 Precision Task Management**: Real-time mission tracking with automated status updates.
+- **💎 Premium UI/UX**: Immersive 3D backgrounds via Three.js and fluid animations powered by Framer Motion.
+- **🛡️ Secure Payouts**: Integrated escrow-style payment tracking with weekly liquidity cycles.
+- **📈 Professional Growth**: Domain-specific competency tests and skill-based project tiering.
+- **🖥️ Desktop Optimized**: A workstation-first interface designed for high-productivity environments.
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Frontend** | Next.js 15 (App & Pages Router) | Core application framework |
+| **Styling** | Tailwind CSS + Framer Motion | Dynamic, micro-animated responsive UI |
+| **Backend** | Firebase (Auth, Firestore, Storage) | Real-time data sync and secure storage |
+| **Visuals** | Three.js + Lucide Icons | 3D background elements and premium iconography |
+| **AI Integration** | Google Gemini API | Automated task description and metadata generation |
 
 ---
 
 ## 🚀 "Model-Ready" Quick Start
-If you are an AI model or developer inheriting this project, please follow the documentation index below for a 360-degree understanding of the architecture.
 
-### 📚 Documentation Hub
-1.  [**🛠️ Tech Stack & Dependencies**](./docs/TECH_STACK.md): Detailed mapping of Next.js 16, Firebase, Three.js, and Framer Motion roles.
-2.  [**🌊 System Flow & State**](./docs/SYSTEM_FLOW.md): End-to-end lifecycle of tasks, currency synchronization, and role-based routing.
-3.  [**🗺️ AI-Model Handover Map**](./docs/AI_DEVELOPER_MAP.md): A topological guide to every directory and file, with extension guides for future features.
+### 📋 Prerequisites
+- **Node.js**: v20 or higher
+- **Firebase**: A project with Auth, Firestore, and Storage enabled
 
----
-
-## 🚄 Local Development Suite
-
-### 1. Pre-requisites
-- **Node.js**: v20 or higher.
-- **Firebase**: A configured project with Auth, Firestore, and Storage enabled.
-
-### 2. Environment Setup
+### 🔧 Environment Setup
 Create a `.env.local` in the root:
 ```env
 NEXT_PUBLIC_FIREBASE_API_KEY=your_key
@@ -31,7 +59,7 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 ```
 
-### 3. Installation & Boot
+### ⚡ Installation & Boot
 ```bash
 # Install high-fidelity dependencies
 npm install
@@ -43,14 +71,26 @@ npm run dev
 ---
 
 ## 🏗️ Project Philosophy
+
 **Cehpoint Work** is built on the principle of **Interaction First**. 
-- Every transition is managed by **Framer Motion**.
+- Every transition is mathematically smoothed by **Framer Motion**.
 - The onboarding experience uses **WebGL (Three.js)** for ultra-premium immersion.
-- The design system follows a **"Command Center"** aesthetic: dark, high-contrast, and informative.
+- The design system follows a **"Command Center"** aesthetic: dark, high-contrast, and deeply informative.
+
+---
+
+## 📚 Documentation Hub
+
+1.  [**🛠️ Tech Stack & Dependencies**](./docs/TECH_STACK.md): Detailed mapping of architecture.
+2.  [**🌊 System Flow & State**](./docs/SYSTEM_FLOW.md): End-to-end lifecycle of tasks and users.
+3.  [**🗺️ AI-Model Handover Map**](./docs/AI_DEVELOPER_MAP.md): A topological guide for AI developers.
 
 ---
 
 ## 🛡️ Maintainer Integrity
-This repository is optimized for **Clarity and Extensibility**. All business logic is centralized in `/utils/storage.ts` to ensure that data integrity can be audited with zero friction.
+This repository is optimized for **Clarity and Extensibility**. All business logic is centralized in `/utils/storage.ts` to ensure data integrity can be audited with zero friction.
 
-*Built with precision by Cehpoint Systems.*
+<div align="center">
+  <br />
+  <p><i>Built with precision by Cehpoint Systems. Optimized for the future of work.</i></p>
+</div>

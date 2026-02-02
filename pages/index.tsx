@@ -897,7 +897,7 @@ const PlatformTransparency = () => {
                 <div className="space-y-8">
                   {[
                     { label: "Review Time", value: "< 48 Hours", sub: "Verification Window" },
-                    { label: "Payout Cycle", value: "Every Friday", sub: "Institutional Liquidity" },
+                    { label: "Payout Cycle", value: "Weekly Basis", sub: "Institutional Liquidity" },
                     { label: "Platform Fee", value: "0% Commission", sub: "Direct Payouts" },
                     { label: "Work Model", value: "Fully Remote", sub: "GlobalNexus Engine" }
                   ].map((spec, i) => (

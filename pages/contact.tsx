@@ -22,8 +22,6 @@ const Navbar = () => (
 export default function ContactSupport() {
     const contactOptions = [
         { title: "General Support", desc: "Available for project-related inquiries and account issues.", label: "support@cehpoint.co.in", icon: Mail },
-        { title: "Enterprise Sales", desc: "For scaling teams and institutional partnerships.", label: "enterprise@cehpoint.co.in", icon: MessageSquare },
-        { title: "Legal & Privacy", desc: "Official inquiries regarding contracts and data protection.", label: "legal@cehpoint.co.in", icon: ShieldCheck },
     ];
 
     return (
@@ -80,10 +78,9 @@ export default function ContactSupport() {
                                     <div className="flex items-start gap-4 text-slate-400 font-medium">
                                         <MapPin className="text-indigo-600 shrink-0" size={24} />
                                         <p className="leading-relaxed">
-                                            Cehpoint Work Infrastructure<br />
-                                            Innovation Hub, Block 7-A<br />
-                                            Global Nexus District<br />
-                                            Bengaluru, KA 560001
+                                            Cehpoint, Labpur, Sandipan Patsala Para,<br />
+                                            Birbhum, Bolpur,<br />
+                                            West Bengal - 731303, India
                                         </p>
                                     </div>
                                 </div>
