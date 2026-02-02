@@ -85,6 +85,77 @@ export async function deleteUser(userId: string) {
   await deleteDoc(doc(db, "users", userId));
 }
 
+export async function deleteUserFull(userId: string) {
+  // 1. Delete user doc
+  await deleteDoc(doc(db, "users", userId));
+
+  // 2. Cleanup payments
+  const pIter = await getDocs(query(paymentsCol, where("userId", "==", userId)));
+  for (const d of pIter.docs) await deleteDoc(doc(db, "payments", d.id));
+
+  // 3. Cleanup submissions
+  const sIter = await getDocs(query(submissionsCol, where("userId", "==", userId)));
+  for (const d of sIter.docs) await deleteDoc(doc(db, "submissions", d.id));
+
+  // 4. Cleanup notifications
+  const nIter = await getDocs(query(notificationsCol, where("userId", "==", userId)));
+  for (const d of nIter.docs) await deleteDoc(doc(db, "notifications", d.id));
+
+  // 5. Cleanup chat messages
+  const cIter = await getDocs(query(chatCol, where("senderId", "==", userId)));
+  for (const d of cIter.docs) await deleteDoc(doc(db, "chatMessages", d.id));
+
+  // 6. Update tasks (remove assignment and references)
+  const tIterEmail = await getDocs(query(tasksCol, where("assignedWorkerIds", "array-contains", userId)));
+  const tIterCand = await getDocs(query(tasksCol, where("candidateWorkerIds", "array-contains", userId)));
+  const tIterDecl = await getDocs(query(tasksCol, where("declinedBy", "array-contains", userId)));
+
+  const taskIds = new Set([...tIterEmail.docs.map(d => d.id), ...tIterCand.docs.map(d => d.id), ...tIterDecl.docs.map(d => d.id)]);
+
+  for (const tid of taskIds) {
+    const d = await getDoc(doc(db, "tasks", tid));
+    if (!d.exists()) continue;
+    const data = d.data();
+
+    const updates: any = {};
+    if (data.assignedWorkerIds) updates.assignedWorkerIds = data.assignedWorkerIds.filter((id: string) => id !== userId);
+    if (data.candidateWorkerIds) updates.candidateWorkerIds = data.candidateWorkerIds.filter((id: string) => id !== userId);
+    if (data.declinedBy) updates.declinedBy = data.declinedBy.filter((id: string) => id !== userId);
+
+    if (data.assignedTo === userId) {
+      updates.assignedTo = (updates.assignedWorkerIds && updates.assignedWorkerIds.length > 0) ? updates.assignedWorkerIds[0] : null;
+    }
+
+    if (data.resignationWorkerId === userId) {
+      updates.resignationWorkerId = null;
+      updates.resignationRequested = false;
+    }
+
+    if (updates.assignedWorkerIds && updates.assignedWorkerIds.length === 0 && data.status === "in-progress") {
+      updates.status = "available";
+    }
+
+    await updateDoc(doc(db, "tasks", tid), updates);
+  }
+}
+
+// ----------------- BLOCKED EMAILS -----------------
+const blockedCol = collection(db, "blockedEmails");
+
+export async function blockEmail(email: string) {
+  const id = email.toLowerCase().trim();
+  await setDoc(doc(db, "blockedEmails", id), {
+    email: id,
+    blockedAt: new Date().toISOString()
+  });
+}
+
+export async function isEmailBlocked(email: string) {
+  const id = email.toLowerCase().trim();
+  const snap = await getDoc(doc(db, "blockedEmails", id));
+  return snap.exists();
+}
+
 // ----------------- TASKS -----------------
 export async function createTask(task: Omit<Task, "id">) {
   const cleaned = cleanObject(task);

@@ -254,10 +254,18 @@ export default function Signup() {
         return;
       }
 
+      // Check if email is blocked
+      const isBlocked = await storage.isEmailBlocked(user.email);
+      if (isBlocked) {
+        toast.error("This email has been restricted. Please contact support.");
+        setLoading(false);
+        return;
+      }
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(user.email);
       if (existingUser) {
-        toast.error("An account with this email already exists. Please login instead.");
+        toast.error("An account with this email already exists.");
         router.push("/login");
         return;
       }
@@ -283,8 +291,37 @@ export default function Signup() {
         toast.error("Please fill all required fields");
         return;
       }
-      if (!authMethod) setAuthMethod("email");
-      setStep(2);
+
+      if (!authMethod && formData.password.length < 6) {
+        toast.error("Password must be at least 6 characters");
+        return;
+      }
+
+      if (formData.phone.length !== 10) {
+        toast.error("Phone number must be exactly 10 digits");
+        return;
+      }
+
+      setLoading(true);
+      try {
+        if (!authMethod) {
+          const isBlocked = await storage.isEmailBlocked(formData.email);
+          if (isBlocked) {
+            toast.error("This email is restricted from joining.");
+            return;
+          }
+
+          const exists = await storage.getUserByEmail(formData.email);
+          if (exists) {
+            toast.error("Email already in use.");
+            return;
+          }
+          setAuthMethod("email");
+        }
+        setStep(2);
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
@@ -329,9 +366,12 @@ export default function Signup() {
         } else {
           await createFirestoreUser(authUid!, authEmailVerified, finalScore);
         }
-      } catch (err) {
-        console.error(err);
-        toast.error("Signup failed. Please try again.");
+      } catch (err: any) {
+        console.error("Signup Terminal Error:", err);
+        const msg = err.code === "auth/email-already-in-use"
+          ? "This email is already registered."
+          : err.message || "Signup failed. Please try again.";
+        toast.error(msg);
       } finally {
         setLoading(false);
       }
@@ -459,7 +499,16 @@ export default function Signup() {
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider ml-1">Phone Number</label>
-                        <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="premium-input w-full p-4 rounded-xl border-slate-200 outline-none" placeholder="Enter Phone Number" />
+                        <input
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                            setFormData({ ...formData, phone: val });
+                          }}
+                          className="premium-input w-full p-4 rounded-xl border-slate-200 outline-none"
+                          placeholder="10-digit number"
+                        />
                       </div>
                     </div>
 

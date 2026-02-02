@@ -32,7 +32,7 @@ import type { User } from "../utils/types";
 type DemoCategory = "developer" | "video-editor" | "designer" | "marketing" | "writing" | "general";
 
 function getDemoCategory(user: User): DemoCategory {
-  const skills = (user.skills ?? []).map((s) => s.toLowerCase());
+  const skills = (Array.isArray(user.skills) ? user.skills : []).map((s) => s.toLowerCase());
   if (skills.includes("developer")) return "developer";
   if (skills.includes("video editor")) return "video-editor";
   if (skills.includes("designer")) return "designer";
@@ -54,7 +54,7 @@ export default function DemoTask() {
       router.push("/login");
       return;
     }
-    if (currentUser.demoTaskCompleted) {
+    if (currentUser.demoTaskSubmission) {
       router.push("/dashboard");
       return;
     }
@@ -109,15 +109,18 @@ export default function DemoTask() {
     setIsSubmitting(true);
 
     try {
-      const demoCategory = getDemoCategory(user);
-      const score = Math.floor(Math.random() * 30) + 70;
-
-      await storage.updateUser(user.id, {
+      const updateData = {
         demoTaskCompleted: true,
-        demoTaskScore: score,
         demoTaskSubmission: submission
-      });
-      toast.success("Test Task Submitted! Score: " + score + "/100");
+      };
+      await storage.updateUser(user.id, updateData);
+
+      // 🔹 Update local session so Dashboard sees the change immediately
+      const updatedUser = { ...user, ...updateData };
+      storage.setCurrentUser(updatedUser);
+      setUser(updatedUser);
+
+      toast.success("Test Task Submitted for Review!");
       setTimeout(() => router.push("/dashboard"), 1500);
     } catch (e) {
       toast.error("Submission failed");

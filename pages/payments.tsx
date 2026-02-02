@@ -201,6 +201,12 @@ export default function Payments() {
       const updatedUser: User = { ...user, ...updateData };
       storage.setCurrentUser(updatedUser);
       setUser(updatedUser);
+
+      // Auto-select if it's the first account added or if specifically desired
+      if (updatedAccounts.length === 1) {
+        setWithdrawAccountId(newAccount.id);
+      }
+
       toast.success(editingAccountId ? "Method updated successfully" : "New method added successfully");
       setShowPayoutForm(false);
       setEditingAccountId(null);
@@ -308,6 +314,10 @@ export default function Payments() {
       const updatedUser: User = { ...user, ...updateData };
       storage.setCurrentUser(updatedUser);
       setUser(updatedUser);
+
+      // Auto-select in withdrawal tab as requested
+      setWithdrawAccountId(accountId);
+
       toast.success("Primary method updated");
     } catch (err) {
       toast.error("Failed to update primary method");
@@ -395,17 +405,21 @@ export default function Payments() {
 
       <div className="max-w-[1400px] mx-auto space-y-8 pb-20">
         {/* PREMIUM HEADER */}
-        <section className="bg-slate-900 rounded-[2.5rem] p-10 md:p-14 text-white border border-white/5 relative overflow-hidden">
+        <section className="bg-slate-900 rounded-[2.5rem] p-6 sm:p-10 md:p-14 text-white border border-white/5 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-[120px] -mr-60 -mt-20" />
 
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-10">
-            <div className="space-y-4">
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8 md:gap-10">
+            <div className="space-y-3 md:space-y-4 w-full">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md">
                 <ShieldCheck size={12} className="text-emerald-400" />
                 <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Secure Payments Active</span>
               </div>
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight">Payments <span className="text-emerald-400">Hub.</span></h1>
-              <p className="text-slate-400 font-medium max-w-lg">Track your earnings, manage your payment methods, and request secure withdrawals in real-time.</p>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-[1.1]">
+                Payments <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-600 block sm:inline">Hub.</span>
+              </h1>
+              <p className="text-slate-400 font-medium max-w-lg text-sm md:text-base leading-relaxed">
+                Track your earnings, manage your payment methods, and request secure withdrawals in real-time.
+              </p>
 
               {(!user.payoutAccounts || user.payoutAccounts.length === 0) && (
                 <motion.div
@@ -419,36 +433,35 @@ export default function Payments() {
               )}
             </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch gap-4">
-              <div className="bg-white/5 border border-white/10 p-5 rounded-[2rem] backdrop-blur-xl">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Available Balance</p>
-                <p className="text-3xl font-black text-white">{formatMoney(user.balance, currency)}</p>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto">
+              <div className="bg-white/5 border border-white/10 p-5 md:p-6 rounded-[2rem] backdrop-blur-xl flex-1">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Available Balance</p>
+                <p className="text-2xl sm:text-3xl font-black text-white truncate">{formatMoney(user.balance, currency)}</p>
               </div>
 
               <button
                 onClick={() => setShowWithdraw(!showWithdraw)}
-                className="h-20 px-10 rounded-[2rem] bg-emerald-600 hover:bg-emerald-700 font-black text-sm uppercase tracking-widest shadow-2xl shadow-emerald-600/20 transition-all active:scale-95 flex items-center justify-center gap-3"
+                className="h-16 md:h-20 px-8 md:px-12 rounded-2xl md:rounded-[2.5rem] bg-emerald-600 hover:bg-emerald-700 font-black text-xs md:text-sm uppercase tracking-[0.2em] shadow-2xl shadow-emerald-600/20 transition-all active:scale-95 flex items-center justify-center gap-3 shrink-0"
               >
-                <Download size={20} /> Withdraw
+                <Download size={18} /> Withdraw
               </button>
             </div>
           </div>
         </section>
 
-        {/* METRICS GRID */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {[
-            { label: "Total Earnings", value: formatMoney(totalEarnings, currency), icon: TrendingUp, color: "text-emerald-600", bg: "bg-gradient-to-br from-emerald-50 to-emerald-100/50" },
-            { label: "Withdrawn", value: formatMoney(totalWithdrawn, currency), icon: Download, color: "text-rose-600", bg: "bg-gradient-to-br from-rose-50 to-rose-100/50" },
-            { label: "Pending Requests", value: payments.filter(p => p.status === 'pending').length, icon: Zap, color: "text-amber-600", bg: "bg-gradient-to-br from-amber-50 to-amber-100/50" }
+            { label: "Total Earnings", value: formatMoney(totalEarnings, currency), icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
+            { label: "Withdrawn", value: formatMoney(totalWithdrawn, currency), icon: Download, color: "text-rose-600", bg: "bg-rose-50" },
+            { label: "Pending Requests", value: payments.filter(p => p.status === 'pending').length, icon: Zap, color: "text-amber-600", bg: "bg-amber-50" }
           ].map((stat, idx) => (
-            <Card key={idx} className="p-8 border-slate-100/50 flex items-center gap-6 group hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500">
-              <div className={`w-16 h-16 rounded-[1.25rem] ${stat.bg} ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110 duration-500`}>
-                <stat.icon size={28} strokeWidth={2.5} />
+            <Card key={idx} className="p-6 md:p-8 border-slate-100 flex items-center gap-4 md:gap-6 group hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500">
+              <div className={`w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110 duration-500 shrink-0`}>
+                <stat.icon className="w-6 h-6 md:w-7 md:h-7" strokeWidth={2.5} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{stat.label}</p>
-                <p className="text-2xl font-black text-slate-900 tracking-tight">{stat.value}</p>
+                <p className="text-xl md:text-2xl font-black text-slate-900 tracking-tight truncate">{stat.value}</p>
               </div>
             </Card>
           ))}
@@ -639,7 +652,7 @@ export default function Payments() {
               )}
             </AnimatePresence>
 
-            <Card className="p-0 overflow-hidden flex flex-col border-slate-100 shadow-xl shadow-slate-200/40 h-full min-h-[750px]">
+            <Card className="p-0 overflow-hidden flex flex-col border-slate-100 shadow-xl shadow-slate-200/40 lg:h-[850px] min-h-[400px]">
               <div className="p-8 pb-0 flex justify-between items-start">
                 <div className="space-y-1">
                   <div className="flex items-center gap-3">
@@ -662,9 +675,9 @@ export default function Payments() {
                       setShowPayoutForm(true);
                     }
                   }}
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg ${showPayoutForm && !editingAccountId ? 'bg-rose-500 text-white rotate-45 hover:bg-rose-600' : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-200'}`}
+                  className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg ${showPayoutForm && !editingAccountId ? 'bg-rose-500 text-white rotate-45 hover:bg-rose-600' : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-200'}`}
                 >
-                  <Plus size={20} />
+                  <Plus className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
               </div>
 
@@ -875,7 +888,7 @@ export default function Payments() {
 
           {/* HISTORY */}
           <div className="lg:col-span-3">
-            <Card className="p-8 h-full flex flex-col min-h-[750px]">
+            <Card className="p-6 md:p-8 lg:h-[850px] flex flex-col overflow-hidden border-slate-100 shadow-xl shadow-slate-200/40">
               <div className="flex justify-between items-center mb-10">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600">
@@ -885,10 +898,10 @@ export default function Payments() {
                     <h2 className="text-2xl font-black text-slate-900 tracking-tight">Payment History</h2>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Your transaction audit log</p>
                   </div>
-                </div>
-                <div className="flex p-1 bg-slate-100/50 rounded-xl border border-slate-200">
-                  <button onClick={() => setCurrency('USD')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest transition-all ${currency === 'USD' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-500'}`}>USD</button>
-                  <button onClick={() => setCurrency('INR')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest transition-all ${currency === 'INR' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-500'}`}>INR</button>
+                  <div className="flex p-1 bg-slate-100/50 rounded-xl border border-slate-200 mt-4 sm:mt-0">
+                    <button onClick={() => setCurrency('USD')} className={`px-3 md:px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest transition-all ${currency === 'USD' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-500'}`}>USD</button>
+                    <button onClick={() => setCurrency('INR')} className={`px-3 md:px-4 py-1.5 rounded-lg text-[10px] font-black tracking-widest transition-all ${currency === 'INR' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-500'}`}>INR</button>
+                  </div>
                 </div>
               </div>
 
@@ -896,41 +909,51 @@ export default function Payments() {
                 <AnimatePresence mode="popLayout">
                   {payments.length === 0 ? (
                     <div className="py-20 text-center bg-slate-50/50 rounded-[2rem] border border-dashed border-slate-200">
-                      <History className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                      <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">No payment records found</p>
+                      <History className="w-10 h-10 md:w-12 md:h-12 text-slate-200 mx-auto mb-4" />
+                      <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[9px] md:text-[10px]">No payment records found</p>
                     </div>
                   ) : (
                     payments.map((p, idx) => (
                       <motion.div key={p.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }} layout className="mb-3 last:mb-0">
                         <div className="p-6 rounded-[2rem] border border-slate-50 bg-slate-50/30 hover:bg-white hover:border-slate-100 hover:shadow-xl hover:shadow-slate-200/50 transition-all group">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-5">
-                              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-12 ${p.type === 'withdrawal' ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}>
-                                {p.type === 'withdrawal' ? <ArrowUpRight size={24} /> : <ArrowDownLeft size={24} />}
+                            <div className="flex items-center gap-3 md:gap-5">
+                              <div className={`w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center transition-transform group-hover:rotate-12 shrink-0 ${p.type === 'withdrawal' ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}>
+                                {p.type === 'withdrawal' ? <ArrowUpRight className="w-4 h-4 md:w-6 md:h-6" /> : <ArrowDownLeft className="w-4 h-4 md:w-6 md:h-6" />}
                               </div>
-                              <div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{format(new Date(p.createdAt), 'MMM dd, yyyy')}</p>
-                                <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">
+                              <div className="min-w-0">
+                                <p className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5 md:mb-1">{format(new Date(p.createdAt), 'MMM dd, yyyy')}</p>
+                                <h3 className="text-sm md:text-lg font-black text-slate-900 tracking-tight uppercase truncate">
                                   {p.type === 'task-payment' ? 'Task Payment' :
                                     p.type === 'manual' ? 'Standard Payment' :
                                       p.type === 'bonus' ? 'Performance Bonus' :
                                         p.type.replace('-', ' ')}
                                 </h3>
-                                <p className="text-xs font-medium text-slate-500 italic">
-                                  {p.payoutMethodDetails || (p.type === 'withdrawal' ? 'Withdrawal' : 'Payment Credit')}
+                                <p className="text-[10px] md:text-xs font-medium text-slate-500 italic truncate max-w-[150px] md:max-w-none">
+                                  {(() => {
+                                    if (!p.payoutMethodDetails) return p.type === 'withdrawal' ? 'Withdrawal' : 'Payment Credit';
+                                    try {
+                                      const d = JSON.parse(p.payoutMethodDetails);
+                                      const type = (d.accountType || p.payoutMethod || '').toUpperCase();
+                                      const detail = d.accountNumber || d.upiId || d.paypalEmail || d.cryptoAddress || p.payoutMethodDetails;
+                                      return type ? `${type} (${detail})` : detail;
+                                    } catch (e) {
+                                      return p.payoutMethodDetails;
+                                    }
+                                  })()}
                                 </p>
                               </div>
                             </div>
 
-                            <div className="text-right">
-                              <p className={`text-2xl font-black tracking-tight ${p.type === 'withdrawal' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            <div className="text-right shrink-0">
+                              <p className={`text-sm md:text-2xl font-black tracking-tight ${p.type === 'withdrawal' ? 'text-rose-600' : 'text-emerald-600'}`}>
                                 {p.type === 'withdrawal' ? '-' : '+'}{formatMoney(p.amount, currency)}
                               </p>
-                              <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest mt-2 ${p.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
+                              <div className={`inline-flex items-center gap-1 px-2 md:px-3 py-0.5 md:py-1 rounded-lg text-[8px] md:text-[9px] font-black uppercase tracking-widest mt-1 md:mt-2 ${p.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
                                 p.status === 'pending' ? 'bg-amber-50 text-amber-600' :
                                   'bg-rose-50 text-rose-600'
                                 }`}>
-                                {p.status === 'completed' ? <CheckCircle2 size={10} /> : <Clock size={10} />}
+                                {p.status === 'completed' ? <CheckCircle2 className="w-2.5 h-2.5 md:w-3 md:h-3" /> : <Clock className="w-2.5 h-2.5 md:w-3 md:h-3" />}
                                 {p.status}
                               </div>
                             </div>

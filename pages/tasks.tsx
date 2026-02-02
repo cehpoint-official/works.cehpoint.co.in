@@ -118,6 +118,13 @@ export default function Tasks() {
   const loadTasks = async (userId: string) => {
     try {
       setLoading(true);
+
+      const currentUser = storage.getCurrentUser();
+      if (!currentUser || currentUser.accountStatus !== "active") {
+        setTasks([]);
+        return;
+      }
+
       const all = await storage.getTasks();
       const myTasks = all.filter((t) => {
         // If I declined it, I NEVER see it (unless it was already assigned to me?? 
@@ -497,22 +504,35 @@ ${submitForm.docUrl ? `**Docs:** ${submitForm.docUrl}` : ""}
                             <>
                               <Button onClick={() => openSubmitModal(task.id)} className="flex-1 h-12 rounded-xl text-[10px] uppercase font-black tracking-widest">Submit Work</Button>
                               <Button onClick={() => openProgressModal(task)} variant="outline" className="h-12 border-indigo-100 text-indigo-600 hover:bg-indigo-50 rounded-xl">Update Progress</Button>
-                              <Button
-                                onClick={() => setResignationModal({ visible: true, taskId: task.id })}
-                                variant="outline"
-                                className="h-12 border-rose-100 text-rose-600 hover:bg-rose-50 rounded-xl px-4"
-                              >
-                                <Undo2 size={18} />
-                              </Button>
+                              <div className="relative group/tooltip">
+                                <Button
+                                  onClick={() => setResignationModal({ visible: true, taskId: task.id })}
+                                  variant="outline"
+                                  className="h-12 border-rose-100 text-rose-600 hover:bg-rose-50 rounded-xl px-4"
+                                >
+                                  <Undo2 size={18} />
+                                </Button>
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-3 py-1.5 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all duration-300 translate-y-2 group-hover/tooltip:translate-y-0 shadow-xl whitespace-nowrap z-50">
+                                  Step Back / Resign
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+                                </div>
+                              </div>
                             </>
                           ) : (
                             <div className="w-full flex items-center justify-center gap-2 py-4 text-[10px] font-black uppercase text-amber-600 tracking-widest bg-amber-50 rounded-xl">
                               <Clock size={16} /> Resignation under Review
                             </div>
                           )}
-                          <Button onClick={() => setActiveChatTask(task.id)} variant="outline" className="h-12 border-indigo-100 text-indigo-600 hover:bg-indigo-50 rounded-xl px-4">
-                            <MessageSquare size={18} />
-                          </Button>
+
+                          <div className="relative group/tooltip">
+                            <Button onClick={() => setActiveChatTask(task.id)} variant="outline" className="h-12 border-indigo-100 text-indigo-600 hover:bg-indigo-50 rounded-xl px-4">
+                              <MessageSquare size={18} />
+                            </Button>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-3 py-1.5 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all duration-300 translate-y-2 group-hover/tooltip:translate-y-0 shadow-xl whitespace-nowrap z-50">
+                              Project Chat / Team Sync
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+                            </div>
+                          </div>
                         </>
                       )}
                       {task.status === "submitted" && (

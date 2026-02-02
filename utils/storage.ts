@@ -176,7 +176,10 @@ import {
   deleteDomain as fsDeleteDomain,
   saveChatMessage as fsSaveChatMessage,
   getChatMessages as fsGetChatMessages,
-  subscribeChatMessages as fsSubscribeChatMessages
+  subscribeChatMessages as fsSubscribeChatMessages,
+  blockEmail as fsBlockEmail,
+  isEmailBlocked as fsIsEmailBlocked,
+  deleteUserFull as fsDeleteUserFull
 } from "./firestore";
 
 import { storage as firebaseStorage } from "./firebase";
@@ -229,6 +232,18 @@ export const storage = {
 
   async updateUser(id: string, payload: Partial<User>): Promise<User | null> {
     return await fsSetUser(id, payload);
+  },
+
+  async deleteUserFull(id: string) {
+    return await fsDeleteUserFull(id);
+  },
+
+  async blockEmail(email: string) {
+    return await fsBlockEmail(email);
+  },
+
+  async isEmailBlocked(email: string) {
+    return await fsIsEmailBlocked(email);
   },
 
 

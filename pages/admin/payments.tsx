@@ -69,7 +69,7 @@ export default function AdminPayments() {
         const init = async () => {
             const user = storage.getCurrentUser();
             if (!user || user.role !== "admin") {
-                router.replace("/login");
+                router.replace("/admin/login");
                 return;
             }
             setCurrentAdmin(user);
@@ -225,14 +225,18 @@ export default function AdminPayments() {
                             <p className="text-slate-400 text-base max-w-xl font-medium leading-relaxed">Centralized liquidity management and institutional-grade transaction auditing for the Cehpoint ecosystem.</p>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-6">
-                            <div className="flex-1 min-w-[180px] bg-white/5 border border-white/10 p-7 rounded-[2rem] backdrop-blur-md">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Total Payouts</p>
-                                <p className="text-3xl font-black text-white tracking-tight leading-none">{formatMoney(totalPayoutVolume, currency)}</p>
+                        <div className="flex flex-wrap items-center gap-4 lg:gap-8">
+                            <div className="flex-auto min-w-fit bg-white/5 border border-white/10 px-8 py-7 rounded-[2rem] backdrop-blur-md">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Total Payout Volume</p>
+                                <p className="text-xl md:text-2xl lg:text-3xl font-black text-white tracking-tight leading-none whitespace-nowrap">
+                                    {formatMoney(totalPayoutVolume, currency)}
+                                </p>
                             </div>
-                            <div className="flex-1 min-w-[180px] bg-white/5 border border-white/10 p-7 rounded-[2rem] backdrop-blur-md">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Liquidated</p>
-                                <p className="text-3xl font-black text-rose-500 tracking-tight leading-none">{formatMoney(totalWithdrawalVolume, currency)}</p>
+                            <div className="flex-auto min-w-fit bg-white/5 border border-white/10 px-8 py-7 rounded-[2rem] backdrop-blur-md">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Total Liquidated</p>
+                                <p className="text-xl md:text-2xl lg:text-3xl font-black text-rose-500 tracking-tight leading-none whitespace-nowrap">
+                                    {formatMoney(totalWithdrawalVolume, currency)}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -430,7 +434,7 @@ export default function AdminPayments() {
 
                                                 <div className="xl:text-right shrink-0">
                                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Liquidate Amount</p>
-                                                    <p className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-3">
+                                                    <p className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tighter leading-none mb-3 whitespace-nowrap">
                                                         {formatMoney(payment.amount, currency)}
                                                     </p>
                                                     <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-amber-50 text-amber-600 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-amber-100">
@@ -526,12 +530,22 @@ export default function AdminPayments() {
                                                 <div className="flex-1 hidden xl:block">
                                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Audit Target</p>
                                                     <p className="text-xs font-bold text-slate-600 bg-slate-100 px-4 py-2 rounded-xl inline-block border border-slate-200 max-w-[250px] truncate" title={payment.payoutMethodDetails}>
-                                                        {payment.payoutMethodDetails || 'INTERNAL SETTLEMENT'}
+                                                        {(() => {
+                                                            if (!payment.payoutMethodDetails) return 'INTERNAL SETTLEMENT';
+                                                            try {
+                                                                const d = JSON.parse(payment.payoutMethodDetails);
+                                                                const type = (d.accountType || payment.payoutMethod || '').toUpperCase();
+                                                                const detail = d.bankAccountNumber || d.accountNumber || d.upiId || d.paypalEmail || d.cryptoAddress || payment.payoutMethodDetails;
+                                                                return type ? `${type} (${detail})` : detail;
+                                                            } catch (e) {
+                                                                return payment.payoutMethodDetails;
+                                                            }
+                                                        })()}
                                                     </p>
                                                 </div>
 
                                                 <div className="lg:text-right shrink-0">
-                                                    <p className={`text-2xl font-black tracking-tighter ${isWithdrawal ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                                    <p className={`text-lg md:text-xl lg:text-2xl font-black tracking-tighter whitespace-nowrap ${isWithdrawal ? 'text-rose-600' : 'text-emerald-600'}`}>
                                                         {isWithdrawal ? '-' : '+'}{formatMoney(payment.amount, currency)}
                                                     </p>
                                                     <div className={`mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-colors ${payment.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :

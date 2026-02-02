@@ -100,7 +100,7 @@ export default function DemoSetup() {
       // If missing, check if any of their skills match a known domain name
       if (!finalTargetName && freshUser?.skills) {
         const firstMatch = domainOptions.find(o =>
-          freshUser.skills.some(s => s.toLowerCase() === o.name.toLowerCase())
+          Array.isArray(freshUser.skills) && freshUser.skills.some(s => s.toLowerCase() === o.name.toLowerCase())
         );
         if (firstMatch) finalTargetName = firstMatch.name;
       }
@@ -126,7 +126,7 @@ export default function DemoSetup() {
                 lowName.includes('design') ? Palette :
                   lowName.includes('market') ? BarChart :
                     lowName.includes('write') ? PenTool : UserIcon,
-            description: freshUser?.skills?.join(", ") || "Specialized Assessment",
+            description: (Array.isArray(freshUser?.skills) ? freshUser.skills : []).join(", ") || "Specialized Assessment",
             color: lowName.includes('dev') ? "bg-blue-500" :
               lowName.includes('video') ? "bg-rose-500" :
                 lowName.includes('design') ? "bg-purple-500" :

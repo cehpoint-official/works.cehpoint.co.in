@@ -50,6 +50,20 @@ const skillOptions = [
   "UI/UX Design", "Graphic Design", "Content Writing", "Digital Marketing", "SEO",
 ];
 
+const TIMEZONE_OPTIONS = [
+  { label: "India (IST, UTC+5:30)", value: "Asia/Kolkata" },
+  { label: "UTC (Universal Time)", value: "UTC" },
+  { label: "US Pacific (PT)", value: "America/Los_Angeles" },
+  { label: "US Eastern (ET)", value: "America/New_York" },
+  { label: "Europe (CET)", value: "Europe/Berlin" },
+];
+
+const EXPERIENCE_OPTIONS = [
+  { label: "Beginner (1-2y)", value: "beginner" },
+  { label: "Intermediate (3-5y)", value: "intermediate" },
+  { label: "Expert (5y+)", value: "expert" },
+];
+
 export default function Dashboard() {
   const router = useRouter();
 
@@ -124,18 +138,22 @@ export default function Dashboard() {
       t.assignedWorkerIds?.includes(userId)
     ));
 
-    // Filter available opportunities
-    setAvailableTasks(tasks.filter((t) => {
-      if (t.status !== "available") return false;
-      if (t.declinedBy?.includes(userId)) return false;
+    // Filter available opportunities - ONLY if worker is active
+    if (currentUser.accountStatus !== "active") {
+      setAvailableTasks([]);
+    } else {
+      setAvailableTasks(tasks.filter((t) => {
+        if (t.status !== "available") return false;
+        if (t.declinedBy?.includes(userId)) return false;
 
-      // If no specific candidates targeted, it's open
-      if (!Array.isArray(t.candidateWorkerIds) || t.candidateWorkerIds.length === 0) return true;
-      // Or if I'm invited
-      if (t.candidateWorkerIds.includes(userId)) return true;
+        // If no specific candidates targeted, it's open
+        if (!Array.isArray(t.candidateWorkerIds) || t.candidateWorkerIds.length === 0) return true;
+        // Or if I'm invited
+        if (t.candidateWorkerIds.includes(userId)) return true;
 
-      return false;
-    }));
+        return false;
+      }));
+    }
   };
 
   if (!user) return null;
@@ -198,6 +216,10 @@ export default function Dashboard() {
   const handleSaveProfile = async () => {
     if (!user || !profileForm) return;
     try {
+      if (profileForm.phone.length !== 10) {
+        toast.error("Phone number must be exactly 10 digits");
+        return;
+      }
       setSavingProfile(true);
       const updatePayload = { ...profileForm };
       await storage.updateUser(user.id, updatePayload);
@@ -403,34 +425,44 @@ export default function Dashboard() {
                             <Phone size={10} className="text-indigo-600" /> Secure Phone
                           </label>
                           <input
-                            type="text"
+                            type="tel"
                             value={profileForm.phone}
-                            onChange={(e) => handleProfileFieldChange("phone", e.target.value)}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                              handleProfileFieldChange("phone", val);
+                            }}
                             className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-all font-bold text-slate-900"
+                            placeholder="10-digit number"
                           />
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
                             <Award size={10} className="text-indigo-600" /> Industry Experience
                           </label>
-                          <input
-                            type="text"
+                          <select
                             value={profileForm.experience}
                             onChange={(e) => handleProfileFieldChange("experience", e.target.value)}
-                            className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-all font-bold text-slate-900"
-                          />
+                            className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-all font-bold text-slate-900 appearance-none cursor-pointer"
+                          >
+                            <option value="">Select Level</option>
+                            {EXPERIENCE_OPTIONS.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
                             <Clock size={10} className="text-indigo-600" /> Global Timezone
                           </label>
-                          <input
-                            type="text"
+                          <select
                             value={profileForm.timezone}
                             onChange={(e) => handleProfileFieldChange("timezone", e.target.value)}
-                            className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-all font-bold text-slate-900"
-                            placeholder="e.g. IST (UTC+5:30)"
-                          />
+                            className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-600 outline-none transition-all font-bold text-slate-900 appearance-none cursor-pointer"
+                          >
+                            {TIMEZONE_OPTIONS.map(tz => (
+                              <option key={tz.value} value={tz.value}>{tz.label}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
 
@@ -529,7 +561,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{stat.label}</p>
-              <p className="text-3xl font-black text-slate-900 tracking-tight">{stat.value}</p>
+              <p className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight truncate" title={stat.value.toString()}>{stat.value}</p>
             </motion.div>
           ))}
         </div>
@@ -543,7 +575,7 @@ export default function Dashboard() {
           <div className="grid lg:grid-cols-2 gap-10">
             {/* STATUS CARDS */}
             <div className="space-y-6">
-              {!user.demoTaskCompleted && (
+              {!user.demoTaskSubmission && user.accountStatus !== "active" && (
                 <Card className="bg-amber-50 border-amber-200 p-8 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform" />
                   <div className="flex items-start gap-5">
@@ -566,14 +598,43 @@ export default function Dashboard() {
               )}
 
               {user.accountStatus === "pending" && (
-                <Card className="bg-blue-50 border-blue-200 p-8">
-                  <div className="flex items-start gap-5">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
-                      <Award size={24} />
+                <Card className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-10 md:p-14 relative overflow-hidden text-white shadow-2xl border-none">
+                  {/* Decorative Elements */}
+                  <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-white/10 rounded-full blur-[100px] -mr-40 -mt-20" />
+                  <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-sky-400/10 rounded-full blur-[80px] -ml-20 -mb-20" />
+
+                  <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-10">
+                    <div className="w-24 h-24 rounded-[2.5rem] bg-white/20 backdrop-blur-xl border border-white/20 flex items-center justify-center shrink-0 shadow-2xl">
+                      {user.demoTaskSubmission ? (
+                        <ShieldCheck size={44} className="text-indigo-100" />
+                      ) : (
+                        <Award size={44} className="text-indigo-100" />
+                      )}
                     </div>
-                    <div>
-                      <h3 className="text-xl font-black text-blue-900 mb-1 tracking-tight">Assessment Review</h3>
-                      <p className="text-blue-700 font-medium">Your credentials are being verified by our talent team. Full platform access will be granted shortly.</p>
+
+                    <div className="space-y-4">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500 border border-white/10">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-indigo-100">Verification Engine Active</span>
+                      </div>
+
+                      <h3 className="text-3xl md:text-4xl font-black tracking-tight leading-tight uppercase">
+                        {user.demoTaskSubmission ? "Verification in Progress" : "Onboarding Review"}
+                      </h3>
+
+                      <p className="text-indigo-100/80 text-lg font-medium leading-relaxed max-w-2xl">
+                        {user.demoTaskSubmission
+                          ? "Success! Your demo task has been securely received. Our talent experts are currently reviewing your work against our quality benchmarks. Once approved, your terminal will unlock exclusive high-paying assignments and weekly payouts."
+                          : "Your profile and credentials have been prioritized for review. Please complete your vetting stage to transition to an active worker and start earning within our ecosystem."}
+                      </p>
+
+                      <div className="pt-4 flex flex-wrap gap-6 items-center">
+
+                        <div className="flex items-center gap-2">
+                          <Briefcase size={16} className="text-emerald-400" />
+                          <span className="text-xs font-black uppercase tracking-wider">Status: Under Review</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -647,7 +708,7 @@ export default function Dashboard() {
                         <div className="flex justify-between items-start mb-4">
                           <h3 className="text-lg font-black text-slate-900 flex-1">{task.title}</h3>
                           <div className="flex gap-2">
-                            {task.skills?.slice(0, 2).map((s: string) => (
+                            {(Array.isArray(task.skills) ? task.skills : []).slice(0, 2).map((s: string) => (
                               <span key={s} className="px-2 py-1 bg-white border border-slate-200 text-[9px] font-bold text-slate-500 rounded-md uppercase tracking-wider">{s}</span>
                             ))}
                           </div>
@@ -661,7 +722,7 @@ export default function Dashboard() {
                               {task.payoutSchedule === "one-time" && task.weeklyPayout === 0 ? "Manual" : formatMoney(task.weeklyPayout, currency)}
                             </span>
                           </div>
-                          <Button onClick={() => handleAcceptTask(task.id)} disabled={!user.demoTaskCompleted} className="h-11 px-6 rounded-xl">Accept Task</Button>
+                          <Button onClick={() => handleAcceptTask(task.id)} disabled={user.accountStatus !== 'active' || !user.demoTaskCompleted} className="h-11 px-6 rounded-xl">Accept Task</Button>
                         </div>
                       </div>
                     ))}

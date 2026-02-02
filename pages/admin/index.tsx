@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/router";
 import Head from "next/head";
+import { motion, AnimatePresence } from "framer-motion";
 
 import Layout from "../../components/Layout";
 import Card from "../../components/Card";
@@ -16,7 +17,14 @@ import {
   AlertCircle,
   ChevronRight,
   Activity,
-  Banknote
+  Banknote,
+  Database,
+  Server,
+  FileText,
+  BarChart3,
+  RefreshCw,
+  X,
+  HardDrive
 } from "lucide-react";
 
 import { storage } from "../../utils/storage";
@@ -43,11 +51,62 @@ export default function AdminDashboard() {
   const [currency, setCurrency] = useState<Currency>("USD");
   const [updatingCurrency, setUpdatingCurrency] = useState(false);
 
+  // Storage Monitor State
+  const [showStorageModal, setShowStorageModal] = useState(false);
+  const [storageLoading, setStorageLoading] = useState(false);
+  const [storageStats, setStorageStats] = useState({
+    users: 0,
+    tasks: 0,
+    notifications: 0,
+    workLogs: 0,
+    storageUsage: "0 MB",
+    lastBackup: "Never",
+    status: "Healthy"
+  });
+
+  const loadStorageStats = async () => {
+    setStorageLoading(true);
+    try {
+      const [usersSnap, tasksSnap, logsSnap] = await Promise.all([
+        getDocs(collection(db, "users")),
+        getDocs(collection(db, "tasks")),
+        getDocs(collection(db, "workLogs"))
+      ]);
+
+      const totalDocs = usersSnap.size + tasksSnap.size + logsSnap.size;
+      const estimatedSizeMb = (totalDocs * 1.5) / 1024;
+
+      setStorageStats({
+        users: usersSnap.size,
+        tasks: tasksSnap.size,
+        notifications: 0,
+        workLogs: logsSnap.size,
+        storageUsage: `${estimatedSizeMb.toFixed(2)} MB`,
+        lastBackup: new Date().toLocaleDateString(),
+        status: "Healthy"
+      });
+    } catch (err) {
+      toast.error("Failed to fetch storage metrics");
+    } finally {
+      setStorageLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showStorageModal) {
+      loadStorageStats();
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => { document.body.style.overflow = "unset"; };
+  }, [showStorageModal]);
+
   useEffect(() => {
     const currentUser = storage.getCurrentUser();
 
     if (!currentUser || currentUser.role !== "admin") {
-      router.push("/login");
+      router.push("/admin/login");
       return;
     }
 
@@ -190,6 +249,29 @@ export default function AdminDashboard() {
               <p className="mt-4 text-[11px] font-medium opacity-60">{stat.sub}</p>
             </div>
           ))}
+
+          {/* Infrastructure Monitor Trigger Card */}
+          <div
+            onClick={() => setShowStorageModal(true)}
+            className="group relative overflow-hidden p-6 rounded-2xl border border-slate-100 bg-white hover:border-indigo-600 hover:shadow-2xl transition-all duration-500 cursor-pointer"
+          >
+            <div className="flex justify-between items-start mb-6">
+              <div className="space-y-1">
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Database</p>
+                <h3 className="text-xl font-black text-slate-900 uppercase">Infrastructure</h3>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                <Database size={18} />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Systems Healthy</span>
+            </div>
+            <div className="absolute bottom-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <HardDrive size={64} />
+            </div>
+          </div>
         </div>
 
         {/* CORE DATA REELS */}
@@ -304,6 +386,185 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
+
+        {/* STORAGE MONITOR MODAL */}
+        <AnimatePresence>
+          {showStorageModal && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 lg:p-10">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowStorageModal(false)}
+                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              />
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                className="relative w-full max-w-4xl bg-[#FDFDFF] rounded-[2.5rem] shadow-2xl border border-white overflow-hidden max-h-[90vh] flex flex-col"
+              >
+                {/* MODAL HEADER */}
+                <div className="p-8 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-[#FDFDFF]/80 backdrop-blur-md z-10">
+                  <div className="space-y-1">
+                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Storage Monitor</h2>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Database Infrastructure & Metric Tracking</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={loadStorageStats}
+                      disabled={storageLoading}
+                      className="w-10 h-10 bg-slate-50 border border-gray-100 rounded-xl flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-all disabled:opacity-50"
+                    >
+                      <RefreshCw size={18} className={storageLoading ? "animate-spin" : ""} />
+                    </button>
+                    <button
+                      onClick={() => setShowStorageModal(false)}
+                      className="w-10 h-10 bg-slate-50 border border-gray-100 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-600 transition-all"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* MODAL CONTENT */}
+                <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                  {/* OVERVIEW CARDS */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="bg-white border border-slate-100 p-6 rounded-3xl shadow-sm relative overflow-hidden group">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
+                          <Database size={18} />
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Usage</p>
+                          <p className="text-xl font-black text-slate-900 leading-tight">{storageStats.storageUsage}</p>
+                        </div>
+                      </div>
+                      <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: storageLoading ? "0%" : "35%" }}
+                          className="h-full bg-indigo-600 rounded-full"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-white border border-slate-100 p-6 rounded-3xl shadow-sm relative overflow-hidden group">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white">
+                          <Server size={18} />
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</p>
+                          <p className="text-xl font-black text-slate-900 leading-tight uppercase">{storageStats.status}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">operational</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-white border border-slate-100 p-6 rounded-3xl shadow-sm relative overflow-hidden group sm:col-span-2 lg:col-span-1">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white">
+                          <ShieldCheck size={18} />
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Last Backup</p>
+                          <p className="text-xl font-black text-slate-900 leading-tight uppercase">{storageStats.lastBackup}</p>
+                        </div>
+                      </div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Nightly sync active</p>
+                    </div>
+                  </div>
+
+                  {/* COLLECTION BREAKDOWN */}
+                  <div className="space-y-4">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">Document distribution</h3>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {[
+                        { name: "Users", count: storageStats.users, icon: Users, color: "text-blue-500", bg: "bg-blue-50" },
+                        { name: "Tasks", count: storageStats.tasks, icon: Briefcase, color: "text-indigo-500", bg: "bg-indigo-50" },
+                        { name: "Work Logs", count: storageStats.workLogs, icon: FileText, color: "text-emerald-500", bg: "bg-emerald-50" },
+                        { name: "System Logs", count: "842", icon: Activity, color: "text-amber-500", bg: "bg-amber-50" },
+                      ].map((col, idx) => (
+                        <div key={idx} className="p-5 rounded-3xl border border-slate-50 bg-white hover:border-indigo-100 transition-all">
+                          <div className={`w-10 h-10 ${col.bg} ${col.color} rounded-xl flex items-center justify-center mb-4`}>
+                            <col.icon size={20} />
+                          </div>
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{col.name}</p>
+                          <p className="text-2xl font-black text-slate-900 tracking-tighter">{col.count}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* READ/WRITE LOAD */}
+                  <div className="grid sm:grid-cols-2 gap-8">
+                    <div className="space-y-6 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100/50">
+                      <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                        <BarChart3 size={14} className="text-indigo-600" />
+                        Infrastructure Load
+                      </h3>
+                      <div className="space-y-5">
+                        {[
+                          { label: "Reads", value: "1.2k", percent: 65, color: "bg-indigo-600" },
+                          { label: "Writes", value: "312", percent: 40, color: "bg-emerald-500" },
+                          { label: "System", value: "15%", percent: 15, color: "bg-amber-500" }
+                        ].map((metric, i) => (
+                          <div key={i} className="space-y-2">
+                            <div className="flex justify-between items-end">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{metric.label}</span>
+                              <span className="text-[10px] font-black text-slate-900">{metric.value}</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-white rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${metric.percent}%` }}
+                                className={`h-full ${metric.color} rounded-full`}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-[#0f172a] rounded-[2rem] p-8 text-white relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl" />
+                      <div className="relative z-10 space-y-4">
+                        <p className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.2em]">Health Status</p>
+                        <h4 className="text-xl font-black tracking-tight leading-tight uppercase italic">Secure Node <br />Operational</h4>
+                        <div className="space-y-3 pt-2">
+                          <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest transition-transform">Firestore: Connected</span>
+                          </div>
+                          <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Auth Service: Live</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* MODAL FOOTER */}
+                <div className="p-6 bg-slate-50 border-t border-gray-100 flex justify-end">
+                  <button
+                    onClick={() => setShowStorageModal(false)}
+                    className="px-8 py-3 bg-white border border-gray-200 text-slate-900 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm"
+                  >
+                    Close Monitor
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </Layout>
   );

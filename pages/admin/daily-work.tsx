@@ -56,7 +56,7 @@ export default function AdminDailyWork() {
   useEffect(() => {
     const currentUser = storage.getCurrentUser();
     if (!currentUser || currentUser.role !== "admin") {
-      router.push("/login");
+      router.push("/admin/login");
       return;
     }
 

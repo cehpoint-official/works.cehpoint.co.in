@@ -9,7 +9,7 @@ import Card from "../../components/Card";
 import Button from "../../components/Button";
 
 import { storage } from "../../utils/storage";
-import type { User, Task, Payment, Currency, Domain } from "../../utils/types";
+import type { User, Task, Payment, Currency, Domain, DailySubmission } from "../../utils/types";
 import { findWorkerForTask, AssignmentExplanation } from "../../utils/taskAssignment";
 import { mailService } from "../../utils/mailService";
 import Chat from "../../components/Chat";
@@ -35,7 +35,14 @@ import {
   UserMinus,
   AlertTriangle,
   ShieldAlert,
-  Undo2
+  Undo2,
+  Sparkles,
+  Loader2,
+  RefreshCw,
+  TrendingUp,
+  Activity,
+  CheckSquare,
+  ListTodo
 } from "lucide-react";
 
 import { format } from "date-fns";
@@ -72,6 +79,7 @@ export default function AdminTasks() {
   const [currentAdmin, setCurrentAdmin] = useState<User | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [workers, setWorkers] = useState<User[]>([]);
+  const [submissions, setSubmissions] = useState<DailySubmission[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -153,6 +161,8 @@ export default function AdminTasks() {
     reason: ""
   });
 
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+
   // 🔹 Dynamic Skills
   const [availableSkills, setAvailableSkills] = useState<string[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
@@ -176,11 +186,12 @@ export default function AdminTasks() {
 
       try {
         setPageLoading(true);
-        const [users, list, dbSkills, dbDomains] = await Promise.all([
+        const [users, list, dbSkills, dbDomains, subs] = await Promise.all([
           storage.getUsers(),
           storage.getTasks(),
           storage.getSkills(),
           storage.getDomains(),
+          storage.getAllSubmissions()
         ]);
 
         if (!mounted) return;
@@ -208,6 +219,7 @@ export default function AdminTasks() {
               new Date(a.createdAt).getTime()
           )
         );
+        setSubmissions(subs);
       } catch (err) {
         console.error("Failed to load admin data:", err);
         toast.error("Failed to load admin data.");
@@ -224,13 +236,24 @@ export default function AdminTasks() {
   }, [router]);
 
   const reloadTasks = async () => {
-    const list = await storage.getTasks();
-    setTasks(
-      list.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
-    );
+    try {
+      const [list, users, subs] = await Promise.all([
+        storage.getTasks(),
+        storage.getUsers(),
+        storage.getAllSubmissions()
+      ]);
+
+      setTasks(
+        list.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+      );
+      setWorkers(users.filter(u => u.role === "worker"));
+      setSubmissions(subs);
+    } catch (err) {
+      console.error("Reload failed", err);
+    }
   };
 
   const addCustomSkill = () => {
@@ -387,11 +410,13 @@ export default function AdminTasks() {
       }
 
       // @ts-ignore
-      const createdTask = await storage.createTask(finalPayload);
+      await storage.createTask(finalPayload);
       await reloadTasks();
 
-      // Notifications
-      if (action === 'assign' && finalPayload.assignedWorkerIds?.length > 0) {
+      // --- NOTIFICATIONS ---
+
+      if (action === 'assign' && (finalPayload.assignedWorkerIds?.length > 0)) {
+        // Internal Dashboard Notifications
         await Promise.all(finalPayload.assignedWorkerIds.map((uid: string) =>
           storage.createNotification({
             userId: uid,
@@ -403,10 +428,27 @@ export default function AdminTasks() {
             link: "/dashboard"
           })
         )).catch(e => console.error("Notification failed", e));
+
+        // External Email Notifications
+        const assignedEmails = workers
+          .filter(u => finalPayload.assignedWorkerIds?.includes(u.id))
+          .map(u => u.email)
+          .filter(Boolean);
+
+        if (assignedEmails.length > 0) {
+          toast.promise(
+            mailService.sendAssignmentNotification(assignedEmails, finalPayload.title),
+            {
+              loading: 'Dispatching assignment emails...',
+              success: `Assignment alerts sent to ${assignedEmails.length} specialists.`,
+              error: 'Email dispatch failed (check SMTP).',
+            }
+          );
+        }
       }
 
       if (action === 'broadcast' && assignmentModal.candidates.length > 0) {
-        // Notify top candidates
+        // Internal Dashboard Notifications (top candidates only)
         await Promise.all(assignmentModal.candidates.slice(0, 5).map(u =>
           storage.createNotification({
             userId: u.id,
@@ -418,8 +460,22 @@ export default function AdminTasks() {
             link: "/dashboard"
           })
         )).catch(e => console.error("Broadcast notifications failed", e));
+
+        // External Email Notifications
+        const candidateEmails = assignmentModal.candidates.map(u => u.email).filter(Boolean);
+        if (candidateEmails.length > 0) {
+          toast.promise(
+            mailService.sendBroadcastNotification(candidateEmails, finalPayload.title),
+            {
+              loading: 'Dispatching broadcast emails...',
+              success: `Broadcast sent to ${candidateEmails.length} specialists.`,
+              error: 'Broadcast email failed (check SMTP settings).',
+            }
+          );
+        }
       }
 
+      // Reset form and close modal
       setNewTask({
         title: "",
         description: "",
@@ -436,20 +492,6 @@ export default function AdminTasks() {
       setWeeklyPayoutInput("");
       setShowCreate(false);
       setAssignmentModal({ ...assignmentModal, visible: false });
-
-      if (action === 'broadcast') {
-        const candidateEmails = assignmentModal.candidates.map(u => u.email).filter(Boolean);
-        if (candidateEmails.length > 0) {
-          toast.promise(
-            mailService.sendBroadcastNotification(candidateEmails, finalPayload.title),
-            {
-              loading: 'Dispatching broadcast emails...',
-              success: `Broadcast sent to ${candidateEmails.length} specialists.`,
-              error: 'Broadcast email failed (check SMTP settings).',
-            }
-          );
-        }
-      }
 
       toast.success("Task processed successfully.");
     } catch (err) {
@@ -479,6 +521,20 @@ export default function AdminTasks() {
         assignedAt: task?.assignedAt || new Date().toISOString(),
       });
       await reloadTasks();
+
+      // 🔹 Notify worker via email
+      const worker = workers.find(w => w.id === workerId);
+      if (worker?.email) {
+        toast.promise(
+          mailService.sendAssignmentNotification([worker.email], task?.title || "New Mission"),
+          {
+            loading: 'Notifying worker...',
+            success: 'Assignment email sent.',
+            error: 'Email failed.',
+          }
+        );
+      }
+
       toast.success("Task assigned.");
     } catch (err) {
       console.error("assignTask error:", err);
@@ -706,6 +762,43 @@ export default function AdminTasks() {
     }
   };
 
+  const handleAIGenerate = async () => {
+    if (!newTask.title) {
+      toast.error("Enter a project title first to use AI magic.");
+      return;
+    }
+
+    setIsGeneratingAI(true);
+    try {
+      const res = await fetch('/api/ai/generate-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newTask.title,
+          category: newTask.category,
+          skills: newTask.skills
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        const msg = res.status === 429
+          ? "AI Quota reached. Please wait 30-60 seconds before trying again."
+          : (data.error || "AI Generation failed");
+        toast.error(msg);
+        return;
+      }
+
+      setNewTask(prev => ({ ...prev, description: data.description }));
+      toast.success("AI magic applied!");
+    } catch (err: any) {
+      console.error("[AI] Error:", err);
+      toast.error("The AI is currently resting. Try again later.");
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
   const handleDeleteTask = async (taskId: string) => {
     if (confirm("Are you sure you want to delete this task?")) {
       performDelete(taskId);
@@ -764,6 +857,14 @@ export default function AdminTasks() {
                 <option value="INR">INR (₹)</option>
               </select>
             </div>
+            <button
+              onClick={reloadTasks}
+              disabled={busy}
+              className="w-11 h-11 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-400 hover:text-indigo-600 transition-all hover:border-indigo-100 shadow-sm"
+              title="Refresh Dashboard Data"
+            >
+              <RefreshCw size={18} className={busy ? "animate-spin" : ""} />
+            </button>
             <Button onClick={() => setShowCreate((s) => !s)}>
               <Plus size={18} />
               <span>{showCreate ? "Close Panel" : "New Task"}</span>
@@ -806,7 +907,22 @@ export default function AdminTasks() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Description</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Description</label>
+                  <button
+                    type="button"
+                    onClick={handleAIGenerate}
+                    disabled={isGeneratingAI}
+                    className="flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all disabled:opacity-50"
+                  >
+                    {isGeneratingAI ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Sparkles size={12} className="text-amber-500" />
+                    )}
+                    {isGeneratingAI ? "AI is thinking..." : "Magic Write"}
+                  </button>
+                </div>
                 <textarea
                   value={newTask.description}
                   onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
@@ -1135,27 +1251,37 @@ export default function AdminTasks() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 min-w-[140px]">
-                      <div className="text-amber-500 bg-amber-50 p-2.5 rounded-xl border border-amber-100">
-                        <Calendar size={16} />
-                      </div>
-                      <div className="text-[11px]">
-                        <p className="text-gray-400 font-bold uppercase tracking-wider mb-0.5">Deadline</p>
-                        <p className="text-gray-900 font-bold text-[13px]">
-                          {task.deadline ? format(new Date(task.deadline), "MMM dd, yyyy") : 'UNSET'}
-                        </p>
-                      </div>
+                    <div className="text-amber-500 bg-amber-50 p-2.5 rounded-xl border border-amber-100">
+                      <Calendar size={16} />
                     </div>
+                    <div className="text-[11px]">
+                      <p className="text-gray-400 font-bold uppercase tracking-wider mb-0.5">Deadline</p>
+                      <p className="text-gray-900 font-bold text-[13px]">
+                        {task.deadline ? format(new Date(task.deadline), "MMM dd, yyyy") : 'UNSET'}
+                      </p>
+                    </div>
+                  </div>
 
-                    <div className="flex flex-col items-end pl-8 border-l border-gray-100">
-                      <p className="text-xl font-bold text-gray-900 leading-none mb-1">
-                        {formatMoney(displayGrant, currency)}
-                        {task.payoutSchedule !== "one-time" && <span className="text-[10px] ml-1 opacity-40">/WK</span>}
-                      </p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider text-right">
-                        {task.payoutSchedule === "one-time" ? "Manual / Final Settlement" : (totalOverride > 0 ? "Weekly (Overwritten)" : "Standard Weekly Payout")}
-                      </p>
+                  <div className="hidden xl:flex items-center gap-4 min-w-[120px] border-l border-gray-100 pl-8">
+                    <div className="flex-1">
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Health</span>
+                        <span className="text-[10px] font-black text-indigo-600">{task.progress || 0}%</span>
+                      </div>
+                      <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-indigo-600" style={{ width: `${task.progress || 0}%` }} />
+                      </div>
                     </div>
+                  </div>
+
+                  <div className="flex flex-col items-end pl-8 border-l border-gray-100">
+                    <p className="text-xl font-bold text-gray-900 leading-none mb-1">
+                      {formatMoney(displayGrant, currency)}
+                      {task.payoutSchedule !== "one-time" && <span className="text-[10px] ml-1 opacity-40">/WK</span>}
+                    </p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider text-right">
+                      {task.payoutSchedule === "one-time" ? "Manual / Final Settlement" : (totalOverride > 0 ? "Weekly (Overwritten)" : "Standard Weekly Payout")}
+                    </p>
                   </div>
                 </div>
 
@@ -1163,6 +1289,60 @@ export default function AdminTasks() {
                   <div className="p-8 border-t border-gray-100 bg-white animate-in slide-in-from-top-2 duration-300">
                     <div className="grid md:grid-cols-[1fr_350px] gap-10">
                       <div className="flex flex-col gap-8">
+                        {/* 🔹 PROJECT PROGRESS SECTION (NOW AT TOP) */}
+                        <section className="bg-gradient-to-br from-white to-gray-50/50 rounded-[2rem] p-8 border border-gray-100 shadow-sm space-y-8">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
+                                <TrendingUp size={24} />
+                              </div>
+                              <div>
+                                <h4 className="text-lg font-black text-gray-900 tracking-tight">PROJECT MOMENTUM</h4>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                  {primaryWorker ? (
+                                    <>Live progress: <span className="text-indigo-600 font-black">{primaryWorker.fullName}</span></>
+                                  ) : (
+                                    "Real-time completion tracking"
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-4xl font-black text-indigo-600">{task.progress || 0}<span className="text-lg opacity-30">%</span></span>
+                            </div>
+                          </div>
+
+                          <div className="relative h-4 bg-gray-100 rounded-full overflow-hidden border-2 border-white shadow-inner">
+                            <div
+                              className="absolute inset-0 bg-indigo-600 transition-all duration-1000 ease-out"
+                              style={{ width: `${task.progress || 0}%` }}
+                            />
+                          </div>
+
+                          {task.checklist && task.checklist.length > 0 && (
+                            <div className="space-y-4 pt-4 border-t border-gray-100">
+                              <div className="flex justify-between items-center text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                <span>Milestones Accomplished</span>
+                                <span className="text-indigo-600 px-3 py-1 bg-indigo-50 rounded-lg">
+                                  {task.checklist.filter(c => c.completed).length}/{task.checklist.length} COMPLETE
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {task.checklist.map((item, i) => (
+                                  <div key={i} className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${item.completed ? 'bg-emerald-50/50 border-emerald-100/50' : 'bg-white border-gray-100'}`}>
+                                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${item.completed ? 'bg-emerald-500 text-white shadow-md' : 'bg-gray-50 border border-gray-200 text-gray-300'}`}>
+                                      {item.completed && <CheckSquare size={14} />}
+                                    </div>
+                                    <span className={`text-xs font-bold truncate ${item.completed ? 'text-emerald-700/60 line-through' : 'text-gray-700'}`}>{item.text}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </section>
+
+
+
                         <section>
                           <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                             <ClipboardList size={14} className="text-indigo-600" /> PROJECT DESCRIPTION
@@ -1291,11 +1471,13 @@ export default function AdminTasks() {
                                 className="w-full px-5 py-4 bg-white border-2 border-gray-200 rounded-2xl font-black text-sm text-gray-900 focus:ring-8 focus:ring-indigo-50 transition-all outline-none appearance-none cursor-pointer"
                               >
                                 <option value="">SELECT WORKER MANUALLY...</option>
-                                {workers.map((w) => (
-                                  <option key={w.id} value={w.id}>
-                                    {w.fullName} — {(w.primaryDomain || (w.skills?.[0] || "Specialist")).toUpperCase()}
-                                  </option>
-                                ))}
+                                {workers
+                                  .filter(w => w.accountStatus === "active")
+                                  .map((w) => (
+                                    <option key={w.id} value={w.id}>
+                                      {w.fullName} — {(w.primaryDomain || (w.skills?.[0] || "Specialist")).toUpperCase()}
+                                    </option>
+                                  ))}
                               </select>
                             </div>
                           ) : (
@@ -1315,7 +1497,7 @@ export default function AdminTasks() {
                                       )}
                                     </div>
                                     <p className="text-[10px] text-gray-400 font-bold uppercase truncate">
-                                      {w.primaryDomain || (w.skills && w.skills.length > 0 ? w.skills.slice(0, 2).join(", ") : w.email)}
+                                      {w.primaryDomain || (Array.isArray(w.skills) && w.skills.length > 0 ? w.skills.slice(0, 2).join(", ") : w.email)}
                                     </p>
                                   </div>
                                   <button
@@ -1343,9 +1525,9 @@ export default function AdminTasks() {
                                 >
                                   <option value="">SELECT WORKER...</option>
                                   {workers
-                                    .filter(w => !task.assignedWorkerIds?.includes(w.id))
+                                    .filter(w => w.accountStatus === "active" && !task.assignedWorkerIds?.includes(w.id))
                                     .map((w) => {
-                                      const specialization = w.primaryDomain || (w.skills && w.skills.length > 0 ? w.skills.slice(0, 2).join(", ") : "Specialist");
+                                      const specialization = w.primaryDomain || (Array.isArray(w.skills) && w.skills.length > 0 ? w.skills.slice(0, 2).join(", ") : "Specialist");
                                       return (
                                         <option key={w.id} value={w.id}>
                                           {w.fullName} — {specialization.toUpperCase()}
@@ -1399,8 +1581,7 @@ export default function AdminTasks() {
                       </div>
                     </div>
                   </div>
-                )
-                }
+                )}
               </Card>
             );
           })}
@@ -1521,6 +1702,6 @@ export default function AdminTasks() {
           </div>
         )
       }
-    </Layout >
+    </Layout>
   );
 }

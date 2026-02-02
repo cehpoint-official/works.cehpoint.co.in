@@ -72,6 +72,24 @@ export default function Login() {
 
       const user = snap.data();
 
+      // 🔹 Check Account Status
+      if (user.accountStatus === "suspended" || user.accountStatus === "terminated") {
+        const msg = user.accountStatus === "suspended"
+          ? "Your account has been suspended. Please contact support."
+          : "Your account has been terminated.";
+        setError(msg);
+        setLoading(false);
+        return;
+      }
+
+      // 🔹 Extra security: check blocklist
+      const isBlocked = await storage.isEmailBlocked(email);
+      if (isBlocked) {
+        setError("This email address has been restricted.");
+        setLoading(false);
+        return;
+      }
+
       if (user.emailVerified === false && result.user.emailVerified) {
         await updateDoc(doc(db, "users", uid), { emailVerified: true });
         user.emailVerified = true;
@@ -144,6 +162,27 @@ export default function Login() {
 
       const user = snap.data();
       const userId = snap.id;
+
+      // 🔹 Check Account Status
+      if (user.accountStatus === "suspended" || user.accountStatus === "terminated") {
+        const msg = user.accountStatus === "suspended"
+          ? "Your account has been suspended. Please contact support."
+          : "Your account has been terminated.";
+        setError(msg);
+        setLoading(false);
+        return;
+      }
+
+      // 🔹 Check blocklist (Google email might be different or same)
+      const userEmail = user.email || fbUser.email;
+      if (userEmail) {
+        const isBlocked = await storage.isEmailBlocked(userEmail);
+        if (isBlocked) {
+          setError("This account has been restricted.");
+          setLoading(false);
+          return;
+        }
+      }
 
       const fullUser: User = {
         id: userId,

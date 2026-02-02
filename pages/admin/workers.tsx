@@ -56,7 +56,7 @@ export default function Workers() {
     const currentUser = storage.getCurrentUser();
 
     if (!currentUser || currentUser.role !== "admin") {
-      router.push("/login");
+      router.push("/admin/login");
       return;
     }
 
@@ -121,32 +121,41 @@ export default function Workers() {
   };
 
   const handleSuspend = async (workerId: string) => {
+    const worker = workers.find(w => w.id === workerId);
+    if (!worker) return;
+
     await storage.updateUser(workerId, { accountStatus: "suspended" });
+    if (worker.email) {
+      await storage.blockEmail(worker.email);
+    }
+
     await storage.createNotification({
       userId: workerId,
       title: "Account Suspended",
-      message: "Your account has been temporarily suspended due to a policy review.",
+      message: "Your account has been temporarily suspended due to a policy review. Your email is now blocked.",
       type: "warning",
       read: false,
       createdAt: new Date().toISOString()
     }).catch(e => console.error("Notification failed", e));
     await loadWorkers();
-    toast.error("Worker has been suspended.");
+    toast.error("Worker suspended and email blocked.");
   };
 
   const handleTerminate = async (workerId: string) => {
-    if (!confirm("DELETE WORKER: This will permanently remove their account. Continue?")) return;
-    await storage.updateUser(workerId, { accountStatus: "terminated" });
-    await storage.createNotification({
-      userId: workerId,
-      title: "Account Terminated",
-      message: "Your access to Cehpoint Work has been permanently revoked.",
-      type: "error",
-      read: false,
-      createdAt: new Date().toISOString()
-    }).catch(e => console.error("Notification failed", e));
-    await loadWorkers();
-    toast.error("Worker deleted.");
+    if (workerId === user?.id) return toast.error("You cannot remove yourself.");
+    if (!confirm("CRITICAL: This will permanently delete this worker's account and ALL associated data (payments, tasks, logs). This cannot be undone. Continue?")) return;
+
+    setLoading(true);
+    try {
+      await storage.deleteUserFull(workerId);
+      toast.success("Worker and all related data purged.");
+      await loadWorkers();
+    } catch (e) {
+      console.error(e);
+      toast.error("Purge failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleManualGrant = async () => {

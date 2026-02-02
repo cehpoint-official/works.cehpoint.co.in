@@ -21,7 +21,13 @@ import {
   Linkedin,
   Instagram,
   Monitor,
-  Smartphone
+  Smartphone,
+  GraduationCap,
+  Target,
+  Users,
+  Rocket,
+  Award,
+  BookOpen
 } from "lucide-react";
 import clsx from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -52,8 +58,8 @@ const Navbar = () => {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         <div className="flex items-center">
-          <span className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
-            Cehpoint <span className="text-indigo-600 font-medium">Work</span>
+          <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
+            Cehpoint <span className="text-indigo-600">Work</span>
           </span>
         </div>
 
@@ -66,7 +72,7 @@ const Navbar = () => {
           </Link>
           <Link
             href="/signup"
-            className="inline-flex items-center justify-center px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-semibold text-white transition-all bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-md shadow-indigo-100"
+            className="inline-flex items-center justify-center px-6 py-2.5 sm:px-8 sm:py-3 text-[11px] sm:text-xs font-black uppercase tracking-widest text-white transition-all bg-indigo-600 rounded-full hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 active:scale-95"
           >
             Get Started
           </Link>
@@ -233,13 +239,13 @@ const LiquidGlassButton = ({ href, children, icon: Icon }: { href: string, child
     <Link href={href}
       onMouseMove={handleMouseMove}
       ref={containerRef}
-      className="group relative overflow-hidden rounded-full p-[1px] transition-all duration-700 hover:scale-[1.08] active:scale-95 flex items-center justify-center cursor-none lg:cursor-pointer"
+      className="group relative overflow-hidden rounded-full p-[1px] transition-all duration-700 hover:scale-[1.08] active:scale-95 flex items-center justify-center cursor-none lg:cursor-pointer w-full sm:w-auto"
     >
       {/* 3D Ambient Shadow */}
       <div className="absolute inset-0 bg-indigo-500/25 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
 
       {/* Outer Polished Shell */}
-      <div className="relative flex h-14 sm:h-16 items-center justify-center rounded-full bg-gradient-to-b from-white via-slate-100 to-slate-400 p-[1.5px] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.6)]">
+      <div className="relative flex h-14 sm:h-16 items-center justify-center rounded-full bg-gradient-to-b from-white via-slate-100 to-slate-400 p-[1.5px] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.6)] w-full">
 
         {/* The Liquid Container */}
         <div className="relative h-full w-full flex items-center justify-center gap-4 rounded-full bg-[#050816] px-10 sm:px-12 text-sm sm:text-base font-black text-white overflow-hidden transition-all duration-700 border border-white/5 shadow-[inset_0_0_20px_rgba(99,102,241,0.2)]">
@@ -323,22 +329,22 @@ const Hero = () => {
       <GridPattern />
       <Geometric3DBackground />
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 lg:items-start">
           {/* Left Content */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="max-w-xl text-left z-10 relative"
+            className="max-w-3xl mx-auto text-center lg:text-left lg:mx-0 lg:max-w-xl z-10 relative"
           >
             {/* Tagline */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold text-[10px] uppercase tracking-[0.2em] mb-8 shadow-sm">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold text-[10px] uppercase tracking-[0.2em] mb-8 shadow-sm mx-auto lg:mx-0">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse" />
               Elite Execution Hub
             </div>
 
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-[1.2] sm:leading-[1.15] mb-6">
+            <h1 className="text-[32px] sm:text-5xl lg:text-6xl font-black tracking-tight text-slate-900 leading-[1.1] sm:leading-[1.15] mb-6">
               Your talent. <br className="hidden lg:block" />
               Our infrastructure. <br className="hidden lg:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">
@@ -346,28 +352,28 @@ const Hero = () => {
               </span>
             </h1>
 
-            <p className="text-base sm:text-lg text-slate-600 mb-8 leading-relaxed max-w-lg">
+            <p className="text-base sm:text-lg text-slate-600 mb-8 leading-relaxed max-w-lg mx-auto lg:mx-0">
               Cehpoint Work is the high-performance alternative to open marketplaces. We bridge the gap between top-tier specialists and premium milestones by managing the entire business layer—leaving you free to build at peak capacity.
             </p>
 
             {/* Credibility Pills */}
-            <div className="flex flex-wrap gap-2 sm:gap-3 mb-10">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap justify-start gap-3 mb-10 w-full lg:w-auto">
               {[
                 { label: "Verified projects only", icon: BadgeCheck },
                 { label: "Weekly payouts", icon: Zap },
                 { label: "Skill-based onboarding", icon: Shield }
               ].map((item, idx) => (
-                <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-full bg-white border border-slate-200 text-xs sm:text-sm font-medium text-slate-700 cursor-default shadow-sm hover:border-indigo-200 transition-colors">
-                  <item.icon className="w-3.5 h-3.5 sm:w-4 h-4 text-indigo-600" />
+                <div key={idx} className="flex items-center justify-start gap-2 px-4 py-2 sm:px-3 sm:py-1.5 rounded-full bg-white border border-slate-200 text-xs sm:text-sm font-medium text-slate-700 cursor-default shadow-sm hover:border-indigo-200 transition-colors w-fit">
+                  <item.icon className="w-4 h-4 text-indigo-600" />
                   <span>{item.label}</span>
                 </div>
               ))}
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-stretch sm:items-center w-full sm:w-auto mt-4">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-stretch sm:items-center justify-center lg:justify-start w-full sm:w-auto mt-4 max-w-sm sm:max-w-none mx-auto lg:mx-0">
               <Link
                 href="/signup"
-                className="group relative inline-flex h-12 sm:h-14 items-center justify-center overflow-hidden rounded-full bg-slate-900 px-8 sm:px-10 font-bold text-white transition-all duration-500 hover:bg-slate-800 hover:scale-[1.02] hover:shadow-2xl hover:shadow-indigo-500/40 text-sm sm:text-base"
+                className="group relative inline-flex h-14 sm:h-16 items-center justify-center overflow-hidden rounded-full bg-slate-900 px-10 sm:px-12 font-bold text-white transition-all duration-500 hover:bg-slate-800 hover:scale-[1.02] hover:shadow-2xl hover:shadow-indigo-500/40 text-[13px] sm:text-base w-full sm:w-auto"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-violet-500 opacity-0 transition-opacity duration-500 group-hover:opacity-20" />
                 <span className="relative flex items-center gap-3">
@@ -398,29 +404,29 @@ const Hero = () => {
 const EarnSteps = () => {
   const steps = [
     {
-      title: "Prove Your Potential",
-      desc: "Complete our assessment. If you have the talent, you're in. No portfolio fluff required.",
+      title: "1. Skill Verification",
+      desc: "Register and complete a domain-specific competency test. We prioritize proven capability over long resumes.",
       icon: Shield,
       color: "bg-blue-50 text-blue-600",
       delay: 0
     },
     {
-      title: "Skip the Proposal",
-      desc: "We assign projects directly to you based on your skill set. No bidding, no price wars.",
+      title: "2. Immediate Access",
+      desc: "Once verified, you gain entry to our internal dashboard with real-time available projects matching your skill set.",
       icon: Zap,
       color: "bg-amber-50 text-amber-600",
       delay: 0.2
     },
     {
-      title: "Focus on Execution",
-      desc: "The company manages the clients and scope. You just build, design, and ship.",
+      title: "3. Direct Assignment",
+      desc: "No proposal writing. When a mission fits your profile, you're assigned directly with a clear scope and budget.",
       icon: Play,
       color: "bg-indigo-50 text-indigo-600",
       delay: 0.4
     },
     {
-      title: "Direct Earnings",
-      desc: "Start earning from Day 1. Receive automatic transfers every Friday for your contribution.",
+      title: "4. Weekly Liquidity",
+      desc: "Submissions are reviewed within 48 hours. Funds are liquidated to your account on a recurring weekly basis.",
       icon: CreditCard,
       color: "bg-emerald-50 text-emerald-600",
       delay: 0.6
@@ -529,39 +535,120 @@ const ValueGrid = () => {
 
             <div className="grid grid-cols-2 gap-4 sm:gap-6 mt-10 sm:mt-12">
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                <div className="text-2xl sm:text-3xl font-bold text-white mb-1">10k+</div>
-                <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Talent</div>
+                <div className="text-2xl sm:text-3xl font-bold text-white mb-1">200+</div>
+                <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Specialists</div>
               </div>
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                <div className="text-2xl sm:text-3xl font-bold text-green-400 mb-1">$2M+</div>
+                <div className="text-2xl sm:text-3xl font-bold text-green-400 mb-1">$200k+</div>
                 <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Paid out</div>
               </div>
             </div>
           </div>
 
           {/* Feature Grid */}
-          <div className="space-y-8">
-            <div className="bg-slate-50 p-8 rounded-3xl border border-slate-100">
-              <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center mb-6 shadow-sm">
-                <Zap className="w-6 h-6 text-amber-500" />
+          <div className="space-y-4 sm:space-y-8">
+            <div className="bg-slate-50 p-6 sm:p-8 rounded-3xl border border-slate-100 group hover:bg-slate-100 transition-colors">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform">
+                <Code className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500" />
               </div>
-              <h4 className="text-xl font-bold text-slate-900 mb-2">Weekly Payouts</h4>
-              <p className="text-slate-600">
-                No "net-30" nonsense. Approved work is paid every Friday, directly to your bank.
+              <h4 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">Enterprise-Grade Works</h4>
+              <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+                Execute missions ranging from AI model training and full-stack architecture to security auditing and strategic marketing.
               </p>
             </div>
 
-            <div className="bg-slate-50 p-8 rounded-3xl border border-slate-100">
-              <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center mb-6 shadow-sm">
-                <BadgeCheck className="w-6 h-6 text-blue-500" />
+            <div className="bg-slate-50 p-6 sm:p-8 rounded-3xl border border-slate-100 group hover:bg-slate-100 transition-colors">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform">
+                <Target className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500" />
               </div>
-              <h4 className="text-xl font-bold text-slate-900 mb-2">Vetted Clients</h4>
-              <p className="text-slate-600">
-                Every project is reviewed for scope and budget before you ever see it.
+              <h4 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">Automated Skill Tuning</h4>
+              <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+                Our platform continuously evaluates your execution quality, automatically unlocking higher-tier projects as your proficiency increases.
               </p>
             </div>
           </div>
 
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const ProfessionalGrowth = () => {
+  const tracks = [
+    {
+      title: "Skill Hardening",
+      desc: "Deep-dive projects that push your technical boundaries. From AI integration to high-scale architecture.",
+      icon: Target,
+      tag: "Technical Excellence",
+      color: "blue"
+    },
+    {
+      title: "Knowledge Hub",
+      desc: "Access proprietary playbooks, research, and documentation from top-tier engineering leads.",
+      icon: BookOpen,
+      tag: "Continuous Learning",
+      color: "indigo"
+    },
+    {
+      title: "Career Hierarchy",
+      desc: "Progress from Specialist to Architect. Clear performance-based levels with increasing responsibilities.",
+      icon: Award,
+      tag: "Career Path",
+      color: "emerald"
+    },
+    {
+      title: "Peer Sync",
+      desc: "Collaborate in elite squads. Learn from the best while contributing your own expertise.",
+      icon: Users,
+      tag: "Collaboration",
+      color: "violet"
+    }
+  ];
+
+  return (
+    <section className="py-24 sm:py-32 bg-slate-50 relative overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col lg:flex-row items-end justify-between gap-8 mb-16 sm:mb-20">
+          <div className="max-w-2xl">
+            <h2 className="text-xs sm:text-sm font-bold text-indigo-600 uppercase tracking-[0.2em] mb-4">Professional Ecosystem</h2>
+            <h3 className="text-3xl sm:text-5xl font-bold text-slate-900 tracking-tight leading-[1.1]">
+              More than just projects. <br />
+              <span className="text-slate-400 font-medium">A career trajectory.</span>
+            </h3>
+          </div>
+          <p className="text-lg text-slate-600 max-w-md pb-1">
+            We don't just provide work; we provide the environment for you to evolve into the top 0.1% of global talent.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {tracks.map((track, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: idx * 0.1 }}
+              className="group bg-white p-8 rounded-[2.5rem] border border-slate-100 hover:border-indigo-100 hover:shadow-2xl hover:shadow-indigo-500/5 transition-all duration-500"
+            >
+              <div className={cn(
+                "w-14 h-14 rounded-2xl flex items-center justify-center mb-8 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-sm",
+                track.color === "blue" && "bg-blue-50 text-blue-600",
+                track.color === "indigo" && "bg-indigo-50 text-indigo-600",
+                track.color === "emerald" && "bg-emerald-50 text-emerald-600",
+                track.color === "violet" && "bg-violet-50 text-violet-600",
+              )}>
+                <track.icon size={28} />
+              </div>
+
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">{track.tag}</span>
+              <h4 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{track.title}</h4>
+              <p className="text-sm text-slate-500 leading-relaxed font-medium">
+                {track.desc}
+              </p>
+            </motion.div>
+          ))}
         </div>
       </div>
     </section>
@@ -728,12 +815,114 @@ const WhoIsThisFor = () => {
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ring-4 ring-emerald-500/20" />
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Available for hire</span>
               </div>
-              <div className="text-[10px] text-slate-500 font-medium">Standard Payout: <span className="text-white">Every Friday</span></div>
+              <div className="text-[10px] text-slate-500 font-medium">Standard Payout: <span className="text-white">Weekly Cycle</span></div>
             </div>
           </motion.div>
 
         </div>
 
+      </div>
+    </section>
+  );
+};
+
+const PlatformTransparency = () => {
+  const pillars = [
+    {
+      title: "Zero Hidden Fees",
+      desc: "We don't charge 'service fees' or 'commission' from your earnings. The budget you see is the amount you receive. Period.",
+      icon: ShieldCheck
+    },
+    {
+      title: "Guaranteed Payouts",
+      desc: "Our escrow system secures project funds before any work begins. You never have to worry about client payment delays.",
+      icon: Zap
+    },
+    {
+      title: "Global Neutrality",
+      desc: "We hire talent based on skill, not geography. As long as you can deliver at the highest level, our doors are open.",
+      icon: CheckCircle2
+    }
+  ];
+
+  return (
+    <section className="py-24 sm:py-32 bg-white relative">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-slate-950 rounded-[2.5rem] sm:rounded-[4rem] p-6 sm:p-16 lg:p-24 relative overflow-hidden border border-white/5 shadow-2xl">
+          {/* Gradients */}
+          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-[140px] -mr-40 -mt-20" />
+          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[100px] -ml-20 -mb-20" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row items-start gap-16 lg:gap-32">
+            <div className="w-full lg:w-[55%] space-y-12">
+              <div className="space-y-5">
+                <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em]">
+                  Transparency Protocol v2.1
+                </div>
+                <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.05]">
+                  Integrity & <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-indigo-600">Shielding.</span>
+                </h2>
+                <p className="text-slate-400 text-base sm:text-xl font-medium leading-relaxed max-w-xl">
+                  Trust is our primary currency. We've optimized the administrative layer so you can focus on what you do best.
+                </p>
+              </div>
+
+              <div className="space-y-10">
+                {pillars.map((p, idx) => (
+                  <div key={idx} className="flex gap-6 items-start group">
+                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-indigo-400 shrink-0 group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-[0_0_30px_rgba(79,70,229,0.4)] transition-all duration-500">
+                      <p.icon size={26} />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-black text-white mb-2 uppercase tracking-tight">{p.title}</h4>
+                      <p className="text-slate-400 text-sm sm:text-base leading-relaxed font-medium">
+                        {p.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="w-full lg:w-[45%]">
+              <div className="bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-8 sm:p-12 relative overflow-hidden backdrop-blur-md">
+                <div className="flex items-center gap-4 mb-10 pb-6 border-b border-white/5">
+                  <div className="w-3 h-3 rounded-full bg-rose-500" />
+                  <div className="w-3 h-3 rounded-full bg-amber-500" />
+                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                  <span className="ml-2 text-[10px] font-black text-slate-500 uppercase tracking-widest px-3 py-1 bg-white/5 rounded-lg">Operational Status</span>
+                </div>
+
+                <div className="space-y-8">
+                  {[
+                    { label: "Review Time", value: "< 48 Hours", sub: "Verification Window" },
+                    { label: "Payout Cycle", value: "Every Friday", sub: "Institutional Liquidity" },
+                    { label: "Platform Fee", value: "0% Commission", sub: "Direct Payouts" },
+                    { label: "Work Model", value: "Fully Remote", sub: "GlobalNexus Engine" }
+                  ].map((spec, i) => (
+                    <div key={i} className="flex justify-between items-end border-b border-white/5 pb-6 last:border-0 last:pb-0 group">
+                      <div>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 group-hover:text-indigo-400 transition-colors">{spec.label}</p>
+                        <p className="text-sm font-bold text-slate-400 group-hover:text-slate-300 transition-colors">{spec.sub}</p>
+                      </div>
+                      <p className="text-xl font-black text-white uppercase tracking-tight">{spec.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-12 p-6 bg-indigo-600/10 border border-indigo-600/20 rounded-2xl flex items-center gap-5">
+                  <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-indigo-600/20">
+                    <ShieldCheck size={20} />
+                  </div>
+                  <p className="text-[11px] text-indigo-100/80 font-medium leading-relaxed">
+                    All intellectual property remains protected under the <span className="text-white font-bold">Cehpoint Legal Protocol</span> until full settlement.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -808,13 +997,10 @@ const Footer = () => {
             </p>
             <div className="flex gap-3">
               {[
-                { icon: Twitter, href: "#" },
-                { icon: Linkedin, href: "#" },
-                { icon: Github, href: "#" },
-                { icon: Instagram, href: "#" }
+                { icon: Linkedin, href: "https://linkedin.com/company/cehpoint" }
               ].map((social, idx) => (
-                <Link key={idx} href={social.href} className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center hover:bg-indigo-600 hover:border-indigo-600 hover:text-white transition-all text-slate-400 shadow-sm">
-                  <social.icon className="w-4 h-4" />
+                <Link key={idx} href={social.href} target="_blank" className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center hover:bg-indigo-600 hover:border-indigo-600 hover:text-white transition-all text-slate-400 shadow-sm group">
+                  <social.icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
                 </Link>
               ))}
             </div>
@@ -833,20 +1019,19 @@ const Footer = () => {
 
           <div className="col-span-1">
             <h4 className="text-slate-900 font-bold mb-6 text-sm uppercase tracking-widest">Company</h4>
-            <ul className="space-y-4 text-sm">
-              <li><Link href="#" className="hover:text-indigo-600 transition-colors">About Story</Link></li>
-              <li><Link href="#" className="hover:text-indigo-600 transition-colors">Our Culture</Link></li>
-              <li><Link href="#" className="hover:text-indigo-600 transition-colors">Contact Support</Link></li>
-              <li><Link href="#" className="hover:text-indigo-600 transition-colors">Media Kit</Link></li>
+            <ul className="space-y-4 text-sm font-medium">
+              <li><Link href="/about" className="hover:text-indigo-600 transition-colors">About Story</Link></li>
+              <li><Link href="/culture" className="hover:text-indigo-600 transition-colors">Our Culture</Link></li>
+              <li><Link href="/contact" className="hover:text-indigo-600 transition-colors">Contact Support</Link></li>
             </ul>
           </div>
 
           <div className="col-span-1 sm:col-span-2">
             <h4 className="text-slate-900 font-bold mb-6 text-sm uppercase tracking-widest">Legal & Trust</h4>
-            <ul className="space-y-4 text-sm">
+            <ul className="space-y-4 text-sm font-medium">
               <li><Link href="/policies/terms" className="hover:text-indigo-600 transition-colors">Terms of Service</Link></li>
               <li><Link href="/policies/privacy" className="hover:text-indigo-600 transition-colors">Privacy Policy</Link></li>
-              <li><Link href="#" className="hover:text-indigo-600 transition-colors">Compliance Standards</Link></li>
+              <li><Link href="/compliance" className="hover:text-indigo-600 transition-colors">Compliance Standards</Link></li>
               <li className="pt-4 mt-2 border-t border-slate-100 flex items-center gap-3">
                 <ShieldCheck className="w-5 h-5 text-indigo-600 shrink-0" />
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">Enterprise Grade Security Enabled</span>
@@ -978,7 +1163,6 @@ export default function Home() {
           name="description"
           content="Earn weekly from verified project work. Cehpoint is the curated work portal for skilled professionals."
         />
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%234f46e5%22/><path d=%22M30 50 L50 70 L80 30%22 stroke=%22white%22 stroke-width=%2212%22 fill=%22none%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/><circle cx=%2275%22 cy=%2225%22 r=%228%22 fill=%22%2310b981%22/></svg>" />
       </Head>
 
       <Navbar />
@@ -988,7 +1172,9 @@ export default function Home() {
         <Hero />
         <EarnSteps />
         <ValueGrid />
+        <ProfessionalGrowth />
         <WhoIsThisFor />
+        <PlatformTransparency />
         <CTA />
       </main>
 

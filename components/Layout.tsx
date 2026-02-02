@@ -102,6 +102,14 @@ export default function Layout({ children }: LayoutProps) {
     if (!userLoading && !user && !['/login', '/signup', '/', '/demo-task'].includes(router.pathname)) {
       router.push('/login');
     }
+
+    // 🔹 Strict Access Control: Non-approved workers stay on Dashboard
+    if (!userLoading && user && user.role === 'worker' && user.accountStatus !== 'active') {
+      const allowedPaths = ['/dashboard', '/demo-task', '/demo-setup'];
+      if (!allowedPaths.includes(router.pathname)) {
+        router.push('/dashboard');
+      }
+    }
   }, [user, userLoading, router.pathname]);
 
 
@@ -128,12 +136,16 @@ export default function Layout({ children }: LayoutProps) {
       { href: "/admin/payments", label: "Payments", icon: Wallet },
       { href: "/admin/domains", label: "Categories", icon: Layers }
     ]
-    : [
-      { href: "/dashboard", label: "Dashboard", icon: Home },
-      { href: "/work-logs", label: "Work Logs", icon: Calendar },
-      { href: "/tasks", label: "Tasks", icon: Briefcase },
-      { href: "/payments", label: "Payments", icon: Wallet }
-    ];
+    : user.accountStatus === "active"
+      ? [
+        { href: "/dashboard", label: "Dashboard", icon: Home },
+        { href: "/work-logs", label: "Work Logs", icon: Calendar },
+        { href: "/tasks", label: "Tasks", icon: Briefcase },
+        { href: "/payments", label: "Payments", icon: Wallet }
+      ]
+      : [
+        { href: "/dashboard", label: "Dashboard", icon: Home }
+      ];
 
   return (
     <div className="min-h-screen bg-[#FDFDFF] selection:bg-indigo-600 selection:text-white">
