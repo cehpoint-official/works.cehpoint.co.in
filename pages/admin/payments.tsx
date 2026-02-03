@@ -69,7 +69,7 @@ export default function AdminPayments() {
         const init = async () => {
             const user = storage.getCurrentUser();
             if (!user || user.role !== "admin") {
-                router.replace("/admin/login");
+                router.replace("/login");
                 return;
             }
             setCurrentAdmin(user);

@@ -106,7 +106,7 @@ export default function AdminDashboard() {
     const currentUser = storage.getCurrentUser();
 
     if (!currentUser || currentUser.role !== "admin") {
-      router.push("/admin/login");
+      router.push("/login");
       return;
     }
 

@@ -49,7 +49,7 @@ export default function AdminDomains() {
     useEffect(() => {
         const current = storage.getCurrentUser();
         if (!current || current.role !== "admin") {
-            router.replace("/admin/login");
+            router.replace("/login");
             return;
         }
         setAdmin(current);

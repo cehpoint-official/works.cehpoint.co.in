@@ -56,7 +56,7 @@ export default function Workers() {
     const currentUser = storage.getCurrentUser();
 
     if (!currentUser || currentUser.role !== "admin") {
-      router.push("/admin/login");
+      router.push("/login");
       return;
     }
 
@@ -103,7 +103,6 @@ export default function Workers() {
     await storage.updateUser(workerId, {
       accountStatus: "active",
       demoTaskSubmission: "", // 🔹 Clear data to save storage
-      demoTaskScore: 0         // 🔹 Reset score as it's no longer needed
     });
 
     await storage.createNotification({
@@ -356,10 +355,6 @@ export default function Workers() {
                         <p className="text-sm font-bold text-indigo-600 truncate">{worker.primaryDomain || "Unset"}</p>
                       </div>
                       <div className="space-y-0.5">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Knowledge Score</p>
-                        <p className="text-sm font-bold text-indigo-600">{worker.knowledgeScore}%</p>
-                      </div>
-                      <div className="space-y-0.5">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Net Balance</p>
                         <p className="text-sm font-bold text-emerald-600">{formatMoney(worker.balance, currency)}</p>
                       </div>
@@ -390,10 +385,6 @@ export default function Workers() {
                               </a>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] font-black text-indigo-900/40 uppercase tracking-widest leading-none mb-1">AI Score</p>
-                          <p className="text-sm font-black text-indigo-600">{worker.demoTaskScore}%</p>
                         </div>
                       </div>
                     )}

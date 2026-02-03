@@ -125,7 +125,24 @@ export default function Dashboard() {
       skills: current.skills || [],
     });
 
-    loadData(current);
+    // 🔹 RE-FETCH USER FROM FIRESTORE TO GET LATEST STATUS
+    const fetchLatestUser = async () => {
+      try {
+        const latestUser = await storage.getUserById(current.id);
+        if (latestUser) {
+          setUser(latestUser);
+          storage.setCurrentUser(latestUser);
+          loadData(latestUser);
+        } else {
+          loadData(current);
+        }
+      } catch (err) {
+        console.error("Failed to fetch latest user data:", err);
+        loadData(current);
+      }
+    };
+
+    fetchLatestUser();
   }, []);
 
   const loadData = async (currentUser: User) => {
@@ -632,7 +649,9 @@ export default function Dashboard() {
 
                         <div className="flex items-center gap-2">
                           <Briefcase size={16} className="text-emerald-400" />
-                          <span className="text-xs font-black uppercase tracking-wider">Status: Under Review</span>
+                          <span className="text-xs font-black uppercase tracking-wider">
+                            Status: {user.demoTaskSubmission ? "Submission Received & Under Review" : "Pending Vetting Stage"}
+                          </span>
                         </div>
                       </div>
                     </div>
